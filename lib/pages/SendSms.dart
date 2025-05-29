@@ -6,7 +6,7 @@ class SendSMS {
   String sendingStatus = "Sending...";
 
   Future<String> sendSms(String msg, String phone) async {
-    String username = "emet";
+    String username = "premium_rent_app";
     String password = "3n34VJAYtq@vZp.";
     String apiUrl = "https://www.egosms.co/api/v1/plain/?";
     try {

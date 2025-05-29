@@ -32,7 +32,7 @@ class DatabaseHelperPayments {
 
   Future<String> _getDatabasePath() async {
     final directory = await getApplicationDocumentsDirectory();
-    return join(directory.path, 'emetdb.db');
+    return join(directory.path, 'premium_rent_app.db');
   }
 
   Future<void> _createDb(Database db, int version) async {

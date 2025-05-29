@@ -36,7 +36,7 @@ class _HomeState extends State<Home> {
                   margin: EdgeInsets.only(
                       left: 20.0, top: 20.0, right: 20.0, bottom: 10.0),
                   child: Text(
-                    "EMET PROPERTY MANAGEMENT",
+                    "PREMIUM RENT APP PROPERTY MANAGEMENT",
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Color.fromARGB(255, 0, 148, 5)),
@@ -118,7 +118,7 @@ class _HomeState extends State<Home> {
   }
 
   void printCredentials(BuildContext context) {
-    if (passwordController.text == "EmetPM") {
+    if (passwordController.text == "PremiumRentPM") {
       // Navigate to Dashboard if credentials are correct
       passwordController.clear();
       Navigator.push(

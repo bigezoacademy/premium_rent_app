@@ -1,5 +1,5 @@
 // ignore: file_names
-import 'package:emet/database_insert.dart';
+import 'package:premium_rent_app/database_insert.dart';
 import 'package:flutter/material.dart';
 import 'AppLayout.dart';
 

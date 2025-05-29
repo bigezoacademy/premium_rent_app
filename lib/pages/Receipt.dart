@@ -1,5 +1,5 @@
-import 'package:emet/database_helper.dart';
-import 'package:emet/pages/AppLayout.dart';
+import 'package:premium_rent_app/database_helper.dart';
+import 'package:premium_rent_app/pages/AppLayout.dart';
 import 'package:flutter/material.dart';
 import '../receiptNumberHelper.dart';
 

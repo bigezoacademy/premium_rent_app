@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
 
 
-  carousel_slider: ^4.0.0
+  carousel_slider: ^5.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -40,16 +40,19 @@ dependencies:
   #flutter_login: ^5.0.0
   # sms_advanced: ^1.1.0
   sqflite: ^2.3.2
-  syncfusion_flutter_pdf: ^24.2.6
-  syncfusion_flutter_pdfviewer: ^24.2.5
-  syncfusion_flutter_datagrid_export: ^24.2.5
+  syncfusion_flutter_pdf: ^29.1.38
+  syncfusion_flutter_pdfviewer: ^29.1.38
+  syncfusion_flutter_datagrid_export: ^29.1.38
   sqflite_common_ffi: ^2.3.2+1
   path_provider: ^2.1.2
   path: ^1.9.0
-  share_plus: ^7.2.2
+  share_plus: ^11.0.0
   http: ^1.2.1
-  firebase_storage: ^11.7.0
-  firebase_core: ^2.28.0
+  firebase_storage: ^12.4.6
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.4
+  cloud_firestore: ^5.6.8
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -60,7 +63,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.1
+  flutter_lints: ^5.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -73,7 +76,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/emetdb.db
+    # - assets/emetdb.db  # Removed emetdb.db to eliminate 'emet' references
     - assets/bigezow.png
     - assets/bigezo.png
     - assets/receipt.png

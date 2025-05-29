@@ -2,17 +2,15 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
-import 'package:emet/pages/AppLayout.dart';
-import 'package:emet/pages/MyDatabase.dart';
+import 'package:premium_rent_app/pages/AppLayout.dart';
+import 'package:premium_rent_app/pages/MyDatabase.dart';
 import 'package:flutter/material.dart';
-import 'package:emet/database_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:path/path.dart' as path;
-import '../FirebaseFileUpload.dart';
 import '../receiptNumberHelper.dart';
 import 'package:http/http.dart' as http;
 import 'SendSms.dart';
@@ -43,14 +41,12 @@ class _PaymentFormState extends State<PaymentForm> {
   @override
   Future<void> initState() async {
     super.initState();
-    if (widget.paymentDetails != null) {
-      payerPhoneController.text = widget.paymentDetails!['phone'];
-      reasonController.text =
-          'Rent for ' + widget.paymentDetails!['selectedMonth'];
-      try {
-        await _loadCurrentReceiptNumber();
-      } catch (e) {}
-    }
+    payerPhoneController.text = widget.paymentDetails['phone'];
+    reasonController.text =
+        'Rent for ' + widget.paymentDetails['selectedMonth'];
+    try {
+      await _loadCurrentReceiptNumber();
+    } catch (e) {}
   }
 
   bool _isSubmitting = false;
@@ -303,16 +299,14 @@ class _PaymentFormState extends State<PaymentForm> {
           final amount = payment["amount"] ?? "";
           final reason = payment["reasonOfPayment"] ?? "";
           final message =
-              "Dear $name, you have paid Ugx $amount -- $reason. Thank you - Emet";
+              "Dear $name, you have paid Ugx $amount -- $reason. Thank you - Premium Rent App";
 
-          final response = await sendSMS.sendSms(message, formattedPhone);
+          await sendSMS.sendSms(message, formattedPhone);
         } catch (e) {
           print('Error: $e');
           _showErrorDialog(
               'Failed to send SMS to client. Check internet or SMS balance.');
         }
-        _createReceipt(payment);
-
         _createReceipt(payment);
         print('Data successfully uploaded and receipt created.');
       } catch (e) {
@@ -380,292 +374,284 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   void _createReceipt(Map<String, dynamic> payment) async {
-    if (widget.paymentDetails != null) {
-      try {
-        // Create a PDF document
-        final PdfDocument document = PdfDocument();
+    try {
+      // Create a PDF document
+      final PdfDocument document = PdfDocument();
 
-        // Add a page to the document
-        document.pageSettings.size = PdfPageSize.a4;
-        PdfPage page = document.pages.add();
+      // Add a page to the document
+      document.pageSettings.size = PdfPageSize.a4;
+      PdfPage page = document.pages.add();
 
-        // Change the page orientation to landscape
-        document.pageSettings.orientation = PdfPageOrientation.landscape;
+      // Change the page orientation to landscape
+      document.pageSettings.orientation = PdfPageOrientation.landscape;
 
-        // Get the background image from assets
-        final ByteData data = await rootBundle.load('assets/receipt.png');
-        final Uint8List backgroundImageBytes = data.buffer.asUint8List();
-        final PdfBitmap backgroundBitmap = PdfBitmap(backgroundImageBytes);
+      // Get the background image from assets
+      final ByteData data = await rootBundle.load('assets/receipt.png');
+      final Uint8List backgroundImageBytes = data.buffer.asUint8List();
+      final PdfBitmap backgroundBitmap = PdfBitmap(backgroundImageBytes);
 
-        // Calculate the position and size to maintain the aspect ratio
-        double imageWidth, imageHeight;
-        if (backgroundBitmap.width > backgroundBitmap.height) {
-          imageWidth = page.getClientSize().width;
-          imageHeight = (page.getClientSize().width / backgroundBitmap.width) *
-              backgroundBitmap.height;
-        } else {
-          imageHeight = page.getClientSize().height;
-          imageWidth = (page.getClientSize().height / backgroundBitmap.height) *
-              backgroundBitmap.width;
-        }
+      // Calculate the position and size to maintain the aspect ratio
+      double imageWidth, imageHeight;
+      if (backgroundBitmap.width > backgroundBitmap.height) {
+        imageWidth = page.getClientSize().width;
+        imageHeight = (page.getClientSize().width / backgroundBitmap.width) *
+            backgroundBitmap.height;
+      } else {
+        imageHeight = page.getClientSize().height;
+        imageWidth = (page.getClientSize().height / backgroundBitmap.height) *
+            backgroundBitmap.width;
+      }
 
-        page.graphics.drawImage(
-          backgroundBitmap,
-          Rect.fromLTWH(0, 0, imageWidth, imageHeight),
-        );
+      page.graphics.drawImage(
+        backgroundBitmap,
+        Rect.fromLTWH(0, 0, imageWidth, imageHeight),
+      );
 
-        // Add new text at the top without pushing existing content
-        final PdfFont topTextFont =
-            PdfStandardFont(PdfFontFamily.helvetica, 14); // Font for top text
-        final PdfColor textColor = PdfColor(0, 107, 179); // Sky blue color
-        final PdfFont topTextFont2 = PdfStandardFont(
-          PdfFontFamily.helvetica,
-          15,
-          style: PdfFontStyle.bold,
-        );
-        // Font for top text
-        final PdfColor textColor2 = PdfColor(0, 0, 0); // Sky blue color
-        double topTextX = 0; // X position for the top text
-        double topTextY = 87; // Y position for the top text
+      // Add new text at the top without pushing existing content
+      final PdfFont topTextFont =
+          PdfStandardFont(PdfFontFamily.helvetica, 14); // Font for top text
+      final PdfColor textColor = PdfColor(0, 107, 179); // Sky blue color
+      final PdfFont topTextFont2 = PdfStandardFont(
+        PdfFontFamily.helvetica,
+        15,
+        style: PdfFontStyle.bold,
+      );
+      // Font for top text
+      final PdfColor textColor2 = PdfColor(0, 0, 0); // Sky blue color
+      double topTextX = 0; // X position for the top text
+      double topTextY = 87; // Y position for the top text
 
-        _drawParagraph(
-          page.graphics,
-          topTextFont2,
-          '                        ${(widget.paymentDetails["apartment"] ?? "").toString().toUpperCase()}',
-          topTextX,
-          topTextY,
-          textColor2,
-        );
+      _drawParagraph(
+        page.graphics,
+        topTextFont2,
+        '                        ${(widget.paymentDetails["apartment"] ?? "").toString().toUpperCase()}',
+        topTextX,
+        topTextY,
+        textColor2,
+      );
 
 // Define the font for the next payment text
-        final PdfFont nextPaymentFont =
-            PdfStandardFont(PdfFontFamily.helvetica, 14);
-        final PdfColor nextPaymentColor =
-            PdfColor(255, 0, 0); // Red color for visibility
+      final PdfFont nextPaymentFont =
+          PdfStandardFont(PdfFontFamily.helvetica, 14);
+      final PdfColor nextPaymentColor =
+          PdfColor(255, 0, 0); // Red color for visibility
 
 // Define a new starting position for the next payment text
-        double nextPaymentX = 50;
-        double nextPaymentY = 300; // Starting Y position; adjust as needed
+      double nextPaymentX = 50;
+      double nextPaymentY = 300; // Starting Y position; adjust as needed
 
 // Add the next payment text
-        _drawParagraph(
-          page.graphics,
-          nextPaymentFont,
-          '                   ${payment["nextpayment"] ?? "N/A"}', // Change key if needed
-          nextPaymentX,
-          nextPaymentY,
-          nextPaymentColor,
-        );
+      _drawParagraph(
+        page.graphics,
+        nextPaymentFont,
+        '                   ${payment["nextpayment"] ?? "N/A"}', // Change key if needed
+        nextPaymentX,
+        nextPaymentY,
+        nextPaymentColor,
+      );
 
 // If needed, update y position for subsequent content
-        double updatedYPosition =
-            nextPaymentY + 20; // Adjust based on new content
+      double x = 50;
+      double y = 119;
 
-        // Set initial position for existing content
-        double x = 50;
-        double y = 119;
+      // Existing content drawing logic
+      String receiptforclient =
+          '${widget.paymentDetails["name"] ?? ''},   Tel: ${payment["payerPhone"] ?? ""}';
 
-        // Existing content drawing logic
-        String receiptforclient =
-            '${widget.paymentDetails["name"] ?? ''},   Tel: ${payment["payerPhone"] ?? ""}';
-
-        String _getMonthName(int month) {
-          switch (month) {
-            case 1:
-              return 'Jan';
-            case 2:
-              return 'Feb';
-            case 3:
-              return 'Mar';
-            case 4:
-              return 'Apr';
-            case 5:
-              return 'May';
-            case 6:
-              return 'Jun';
-            case 7:
-              return 'Jul';
-            case 8:
-              return 'Aug';
-            case 9:
-              return 'Sep';
-            case 10:
-              return 'Oct';
-            case 11:
-              return 'Nov';
-            case 12:
-              return 'Dec';
-            default:
-              return '';
-          }
+      String _getMonthName(int month) {
+        switch (month) {
+          case 1:
+            return 'Jan';
+          case 2:
+            return 'Feb';
+          case 3:
+            return 'Mar';
+          case 4:
+            return 'Apr';
+          case 5:
+            return 'May';
+          case 6:
+            return 'Jun';
+          case 7:
+            return 'Jul';
+          case 8:
+            return 'Aug';
+          case 9:
+            return 'Sep';
+          case 10:
+            return 'Oct';
+          case 11:
+            return 'Nov';
+          case 12:
+            return 'Dec';
+          default:
+            return '';
         }
-
-        int receiptNumber = 1;
-        try {
-          receiptNumber = await ReceiptNumberHelper.instance.getReceiptNumber();
-          print(receiptNumber);
-        } catch (e) {
-          print('Error fetching receipt number: $e');
-        }
-        final String receiptNumberText = '$receiptNumber';
-        String dateofreceipt =
-            "${DateTime.now().day}/${_getMonthName(DateTime.now().month)}/${DateTime.now().year}";
-        print('date is--------------------- $dateofreceipt');
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '$receiptNumberText                                                                           $dateofreceipt',
-          x,
-          y,
-          textColor,
-        );
-        y += 47; // Increased line spacing for readability
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          receiptforclient,
-          x,
-          y,
-          textColor,
-        );
-        y += 22; // Increased line spacing for readability
-
-        final amountText = payment["amountInWords"] ?? "";
-        final splitStrings = _splitText(amountText, 60, 80);
-        final firstamount = splitStrings[0];
-        final secondamount = splitStrings[1];
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '                           $firstamount', // Use the text that is properly wrapped and possibly truncated
-          x,
-          y,
-          textColor,
-        );
-
-        y += 20;
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '$secondamount', // Use the text that is properly wrapped and possibly truncated
-          x,
-          y,
-          textColor,
-        );
-
-        y += 30;
-
-        // Print the wrapped amount in words to the console
-
-        final reasonText = payment["reasonOfPayment"] ?? "";
-        final splitStringsReason = _splitText(reasonText, 40, 80);
-        final firstreason = splitStringsReason[0];
-        final secondreason = splitStringsReason[1];
-        print('-------------FIRST REASON -------$firstreason');
-        print('-------------SECOND REASON -------$firstreason');
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '                       $firstreason',
-          x,
-          y,
-          textColor,
-        );
-        y += 20;
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          ' $secondreason',
-          x,
-          y,
-          textColor,
-        );
-        y += 30;
-
-        // Print the wrapped reason of payment to the console
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '                                                                              ${payment["balance"] ?? ""}',
-          x,
-          y,
-          textColor,
-        );
-        y += 36;
-
-        _drawParagraph(
-          page.graphics,
-          topTextFont,
-          '            ${payment["amount"] ?? ""}',
-          x,
-          y,
-          textColor,
-        );
-        y += 10;
-
-        // Save the PDF to a file in the "receipts" subfolder
-        final List<int> bytes = await document.save();
-        document.dispose();
-
-        // Save the PDF to a file in the "receipts" subfolder
-        final String selectedMonth =
-            widget.paymentDetails['selectedMonth'] ?? 'default';
-        final String subfolderPath = await _getSubfolderPath(selectedMonth);
-        final String timestamp = getFormattedTimestamp();
-        final String fileName =
-            'Receipt_${widget.paymentDetails["name"]}_$timestamp.pdf';
-        final String filePath =
-            await _saveAsFile(bytes, selectedMonth, fileName);
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              appBar: AppBar(
-                title: Text('Receipt'),
-                actions: [
-                  IconButton(
-                    icon: Icon(Icons.share),
-                    onPressed: () async {
-                      await _sharePdf(filePath);
-                    },
-                  ),
-                ],
-              ),
-              body: SfPdfViewer.file(File(filePath)),
-            ),
-          ),
-        );
-
-        //UPLOAD TO firebase
-        //await FirebaseFileUpload.uploadPdf(context, filePath, selectedMonth);
-
-        // Share the PDF file
-        await _sharePdf(filePath);
-
-        // Display the PDF using Syncfusion PDF Viewer
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              appBar: AppBar(
-                title: Text('Receipt'),
-              ),
-              body: SfPdfViewer.file(File(filePath)),
-            ),
-          ),
-        );
-      } catch (e) {
-        print('Error creating receipt: $e');
-        _showErrorDialog('Error creating receipt: $e');
       }
+
+      int receiptNumber = 1;
+      try {
+        receiptNumber = await ReceiptNumberHelper.instance.getReceiptNumber();
+        print(receiptNumber);
+      } catch (e) {
+        print('Error fetching receipt number: $e');
+      }
+      final String receiptNumberText = '$receiptNumber';
+      String dateofreceipt =
+          "${DateTime.now().day}/${_getMonthName(DateTime.now().month)}/${DateTime.now().year}";
+      print('date is--------------------- $dateofreceipt');
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '$receiptNumberText                                                                           $dateofreceipt',
+        x,
+        y,
+        textColor,
+      );
+      y += 47; // Increased line spacing for readability
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        receiptforclient,
+        x,
+        y,
+        textColor,
+      );
+      y += 22; // Increased line spacing for readability
+
+      final amountText = payment["amountInWords"] ?? "";
+      final splitStrings = _splitText(amountText, 60, 80);
+      final firstamount = splitStrings[0];
+      final secondamount = splitStrings[1];
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '                           $firstamount', // Use the text that is properly wrapped and possibly truncated
+        x,
+        y,
+        textColor,
+      );
+
+      y += 20;
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '$secondamount', // Use the text that is properly wrapped and possibly truncated
+        x,
+        y,
+        textColor,
+      );
+
+      y += 30;
+
+      // Print the wrapped amount in words to the console
+
+      final reasonText = payment["reasonOfPayment"] ?? "";
+      final splitStringsReason = _splitText(reasonText, 40, 80);
+      final firstreason = splitStringsReason[0];
+      final secondreason = splitStringsReason[1];
+      print('-------------FIRST REASON -------$firstreason');
+      print('-------------SECOND REASON -------$firstreason');
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '                       $firstreason',
+        x,
+        y,
+        textColor,
+      );
+      y += 20;
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        ' $secondreason',
+        x,
+        y,
+        textColor,
+      );
+      y += 30;
+
+      // Print the wrapped reason of payment to the console
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '                                                                              ${payment["balance"] ?? ""}',
+        x,
+        y,
+        textColor,
+      );
+      y += 36;
+
+      _drawParagraph(
+        page.graphics,
+        topTextFont,
+        '            ${payment["amount"] ?? ""}',
+        x,
+        y,
+        textColor,
+      );
+      y += 10;
+
+      // Save the PDF to a file in the "receipts" subfolder
+      final List<int> bytes = await document.save();
+      document.dispose();
+
+      // Save the PDF to a file in the "receipts" subfolder
+      final String selectedMonth =
+          widget.paymentDetails['selectedMonth'] ?? 'default';
+      final String timestamp = getFormattedTimestamp();
+      final String fileName =
+          'Receipt_${widget.paymentDetails["name"]}_$timestamp.pdf';
+      final String filePath = await _saveAsFile(bytes, selectedMonth, fileName);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text('Receipt'),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.share),
+                  onPressed: () async {
+                    await _sharePdf(filePath);
+                  },
+                ),
+              ],
+            ),
+            body: SfPdfViewer.file(File(filePath)),
+          ),
+        ),
+      );
+
+      //UPLOAD TO firebase
+      //await FirebaseFileUpload.uploadPdf(context, filePath, selectedMonth);
+
+      // Share the PDF file
+      await _sharePdf(filePath);
+
+      // Display the PDF using Syncfusion PDF Viewer
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text('Receipt'),
+            ),
+            body: SfPdfViewer.file(File(filePath)),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Error creating receipt: $e');
+      _showErrorDialog('Error creating receipt: $e');
     }
   }
 
@@ -739,7 +725,7 @@ class _PaymentFormState extends State<PaymentForm> {
       print('File exists: $exists');
       if (exists) {
         // Share the PDF file
-        await Share.shareFiles([filePath], text: 'Receipt');
+        await Share.shareXFiles([XFile(filePath)], text: 'Receipt');
       } else {
         throw 'The source file doesn\'t exist.';
       }

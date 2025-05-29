@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:emet/receiptNumberHelper.dart'; // Import ReceiptNumberHelper
-import 'package:emet/pages/PaymentForm.dart';
+import 'package:premium_rent_app/receiptNumberHelper.dart'; // Import ReceiptNumberHelper
+import 'package:premium_rent_app/pages/PaymentForm.dart';
 import 'package:path_provider/path_provider.dart';
 import '../database_helper.dart';
 import 'AppLayout.dart';
