@@ -8,13 +8,14 @@ class Dashboard extends StatelessWidget {
       body: Center(
           child: Column(children: [
         SizedBox(height: 100),
-        Icon(
-          Icons.print,
-          color: Color.fromARGB(255, 101, 101, 101),
-          size: 200.0,
-        ),
+        Column(children: <Widget>[
+          Image(
+            image: AssetImage("assets/bigezow.png"),
+            width: 250,
+          ),
+        ]),
         SizedBox(height: 20),
-        Text('Welcome Admin!',
+        Text('Elevating Property Experiences',
             style: TextStyle(color: Colors.black, fontSize: 20.0)),
       ])),
     );

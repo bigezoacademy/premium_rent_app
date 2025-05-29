@@ -1,4 +1,4 @@
-# exodus_app
+# emet
 
 A new Flutter project.
 

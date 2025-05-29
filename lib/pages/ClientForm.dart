@@ -1,5 +1,5 @@
-import 'package:exodus_app/database_helper.dart';
-import 'package:exodus_app/pages/MyDatabase.dart';
+import 'package:emet/database_helper.dart';
+import 'package:emet/pages/MyDatabase.dart';
 import 'package:flutter/material.dart';
 import 'AppLayout.dart';
 

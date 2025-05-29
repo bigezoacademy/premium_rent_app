@@ -1,28 +1,26 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
 
-class DatabaseHelperInsert {
-  static final DatabaseHelperInsert instance =
-      DatabaseHelperInsert._privateConstructor();
+class PropertiesManager {
+  static final PropertiesManager instance =
+      PropertiesManager._privateConstructor();
 
   static Database? _database;
 
-  DatabaseHelperInsert._privateConstructor();
+  PropertiesManager._privateConstructor();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-
     _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
     final path = await _getDatabasePath();
-    print('Database path: $path'); // Print the database path
+    print('Database path: $path');
     return await openDatabase(
       path,
       version: 1,
@@ -47,27 +45,40 @@ class DatabaseHelperInsert {
 
   Future<void> _createDb(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS clients (
+      CREATE TABLE IF NOT EXISTS properties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
-        phone TEXT,
-        apartment TEXT,
-        room TEXT
+        location TEXT
       )
     ''');
   }
 
-  Future<int> insertClient(Map<String, dynamic> client) async {
+  Future<int> insertProperty(Map<String, dynamic> property) async {
     Database db = await instance.database;
-    // Ensure the table exists before inserting data
-    await _createDb(db, 1);
-    return await db.insert('clients', client);
+    return await db.insert('properties', property);
   }
 
-  Future<List<Map<String, dynamic>>> getClients() async {
+  Future<List<Map<String, dynamic>>> getProperties() async {
     Database db = await instance.database;
-    // Ensure the table exists before querying data
-    await _createDb(db, 1);
-    return await db.query('clients');
+    return await db.query('properties');
+  }
+
+  Future<int> updateProperty(int id, Map<String, dynamic> property) async {
+    Database db = await instance.database;
+    return await db.update(
+      'properties',
+      property,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteProperty(int id) async {
+    Database db = await instance.database;
+    return await db.delete(
+      'properties',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

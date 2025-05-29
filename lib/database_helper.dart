@@ -31,12 +31,12 @@ class DatabaseHelper {
 
   Future<String> _getDatabasePath() async {
     final directory = await getApplicationDocumentsDirectory();
-    final dbPath = join(directory.path, 'exodus.db');
+    final dbPath = join(directory.path, 'emetdb.db');
 
     // Check if the database file already exists
     if (!await File(dbPath).exists()) {
       // Copy the bundled database file to the application documents directory
-      ByteData data = await rootBundle.load('assets/exodus.db');
+      ByteData data = await rootBundle.load('assets/emetdb.db');
       List<int> bytes = data.buffer.asUint8List();
       await File(dbPath).writeAsBytes(bytes);
     }

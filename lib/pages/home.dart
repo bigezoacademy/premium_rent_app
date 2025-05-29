@@ -36,10 +36,10 @@ class _HomeState extends State<Home> {
                   margin: EdgeInsets.only(
                       left: 20.0, top: 20.0, right: 20.0, bottom: 10.0),
                   child: Text(
-                    "NAKITTO SARAH APARTMENTS",
+                    "EMET PROPERTY MANAGEMENT",
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color.fromARGB(197, 11, 90, 174)),
+                        color: Color.fromARGB(255, 0, 148, 5)),
                   ),
                 ),
                 Container(
@@ -76,7 +76,7 @@ class _HomeState extends State<Home> {
                     child: ElevatedButton(
                       style: ButtonStyle(
                         backgroundColor: MaterialStateProperty.all<Color>(
-                          Color.fromARGB(198, 4, 90, 171),
+                          Color.fromARGB(255, 0, 148, 5),
                         ),
                         elevation: MaterialStateProperty.all<double>(3),
                         padding: MaterialStateProperty.all(EdgeInsets.all(10)),
@@ -118,7 +118,7 @@ class _HomeState extends State<Home> {
   }
 
   void printCredentials(BuildContext context) {
-    if (passwordController.text == "Nakitto") {
+    if (passwordController.text == "EmetPM") {
       // Navigate to Dashboard if credentials are correct
       passwordController.clear();
       Navigator.push(

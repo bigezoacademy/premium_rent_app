@@ -1,10 +1,11 @@
-import 'package:exodus_app/pages/Analytics.dart';
-import 'package:exodus_app/pages/ClientForm.dart';
-import 'package:exodus_app/pages/NewClientForm.dart';
-import 'package:exodus_app/pages/PaymentForm.dart';
-import 'package:exodus_app/pages/Dashboard.dart';
-import 'package:exodus_app/pages/home.dart';
-import 'package:exodus_app/pages/MyDatabase.dart';
+import 'package:emet/pages/Analytics.dart';
+import 'package:emet/pages/ClientForm.dart';
+import 'package:emet/pages/NewClientForm.dart';
+import 'package:emet/pages/PaymentForm.dart';
+import 'package:emet/pages/Dashboard.dart';
+import 'package:emet/pages/Properties.dart';
+import 'package:emet/pages/home.dart';
+import 'package:emet/pages/MyDatabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:sqflite/sqflite.dart';
@@ -22,10 +23,10 @@ class AppLayout extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Exodus LLC',
+          'EMET Property Management',
           style: TextStyle(
             color: const Color.fromARGB(255, 255, 255, 255),
-            fontSize: 24,
+            fontSize: 18,
           ),
         ),
         iconTheme: IconThemeData(
@@ -59,12 +60,12 @@ class AppDrawer extends StatelessWidget {
         children: <Widget>[
           DrawerHeader(
               decoration: BoxDecoration(
-                color: Color.fromARGB(255, 0, 94, 148),
+                color: Color.fromARGB(255, 6, 130, 31),
               ),
               child: Column(children: <Widget>[
                 Image(
                   image: AssetImage("assets/bigezow.png"),
-                  width: 150,
+                  width: 100,
                 ),
               ])),
           ListTile(
@@ -102,10 +103,10 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: Icon(Icons.home),
-            title: Text('Home', style: TextStyle(color: Colors.black)),
+            title: Text('Properties', style: TextStyle(color: Colors.black)),
             onTap: () {
               Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => Dashboard()));
+                  MaterialPageRoute(builder: (context) => Properties()));
             },
           ),
           ListTile(

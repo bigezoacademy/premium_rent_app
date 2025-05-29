@@ -1,10 +1,11 @@
-import 'package:exodus_app/pages/ClientForm.dart';
-import 'package:exodus_app/pages/home.dart';
+import 'package:emet/pages/ClientForm.dart';
+import 'package:emet/pages/home.dart';
 
 import 'pages/Dashboard.dart';
 import 'package:flutter/material.dart';
+import 'pages/SendSms.dart';
 
-void main() {
+void main() async {
   runApp(MyApp());
 }
 

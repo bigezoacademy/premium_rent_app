@@ -1,4 +1,4 @@
-package com.example.exodus_app
+package com.example.emet
 
 import io.flutter.embedding.android.FlutterActivity
 

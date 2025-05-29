@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:exodus_app/receiptNumberHelper.dart'; // Import ReceiptNumberHelper
-import 'package:exodus_app/pages/PaymentForm.dart';
+import 'package:emet/receiptNumberHelper.dart'; // Import ReceiptNumberHelper
+import 'package:emet/pages/PaymentForm.dart';
 import 'package:path_provider/path_provider.dart';
 import '../database_helper.dart';
 import 'AppLayout.dart';
@@ -14,7 +14,7 @@ class MyDatabase extends StatefulWidget {
 
 class _DatabaseState extends State<MyDatabase> {
   late String selectedMonth;
-  late String nameOfParent;
+  late String apartment;
   late int receiptNomba = 0; // Initialize receipt number
   late String phone; // Declare the phone variable
 
@@ -42,7 +42,7 @@ class _DatabaseState extends State<MyDatabase> {
     super.initState();
     ReceiptNumberHelper.instance.database;
     selectedMonth = months[0];
-    nameOfParent = '';
+    apartment = '';
     updateContactList();
   }
 
@@ -285,7 +285,7 @@ class _DatabaseState extends State<MyDatabase> {
       if (clientDetails.isNotEmpty) {
         phone = clientDetails['phone'];
         String month = selectedMonth;
-        nameOfParent = clientDetails['apartment'];
+        apartment = clientDetails['apartment'];
         try {
           // Removed the assignment of the result
           await ReceiptNumberHelper.instance.updateReceiptNumber();
@@ -301,7 +301,7 @@ class _DatabaseState extends State<MyDatabase> {
         Map<String, dynamic> paymentDetails = {
           'clientId': clientDetails['id'],
           'name': clientDetails['name'],
-          'nameOfParent': clientDetails['apartment'],
+          'apartment': clientDetails['apartment'],
           'selectedMonth': selectedMonth,
           'phone': phone,
         };

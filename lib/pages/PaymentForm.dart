@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 
-import 'package:exodus_app/pages/AppLayout.dart';
-import 'package:exodus_app/pages/MyDatabase.dart';
+import 'package:emet/pages/AppLayout.dart';
+import 'package:emet/pages/MyDatabase.dart';
 import 'package:flutter/material.dart';
-import 'package:exodus_app/database_helper.dart';
+import 'package:emet/database_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,6 +15,7 @@ import 'package:path/path.dart' as path;
 import '../FirebaseFileUpload.dart';
 import '../receiptNumberHelper.dart';
 import 'package:http/http.dart' as http;
+import 'SendSms.dart';
 
 class PaymentForm extends StatefulWidget {
   final Map<String, dynamic> paymentDetails;
@@ -35,6 +36,7 @@ class _PaymentFormState extends State<PaymentForm> {
   final TextEditingController payerPhoneController = TextEditingController();
   final TextEditingController balanceController = TextEditingController();
   final TextEditingController receiptNumberController = TextEditingController();
+  final TextEditingController nextDateController = TextEditingController();
 
   int receiptNumber = 1;
 
@@ -89,7 +91,7 @@ class _PaymentFormState extends State<PaymentForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '  ${widget.paymentDetails["name"]}',
+                      '  ${widget.paymentDetails["name"]}  -> ${widget.paymentDetails["apartment"]}',
                       style: TextStyle(
                           fontSize: 18.0, fontWeight: FontWeight.bold),
                     ),
@@ -150,6 +152,15 @@ class _PaymentFormState extends State<PaymentForm> {
                     TextFormField(
                       controller: balanceController,
                       decoration: InputDecoration(labelText: 'Balance'),
+                      style: TextStyle(
+                          color: Color.fromARGB(255, 188, 4, 4),
+                          fontSize: 14.0,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    TextFormField(
+                      controller: nextDateController,
+                      decoration:
+                          InputDecoration(labelText: 'Next Payment on:'),
                       style: TextStyle(
                           color: Color.fromARGB(255, 188, 4, 4),
                           fontSize: 14.0,
@@ -230,7 +241,31 @@ class _PaymentFormState extends State<PaymentForm> {
     );
   }
 
+  String? formatPhoneNumber(String phone) {
+    // Remove any non-digit characters
+    phone = phone.replaceAll(RegExp(r'\D'), '');
+
+    if (phone.startsWith('0')) {
+      // Remove leading 0 and add 256
+      phone = '256' + phone.substring(1);
+    } else if (phone.startsWith('7')) {
+      // Add 256 before 7
+      phone = '256' + phone;
+    } else if (!phone.startsWith('256')) {
+      // If the phone number does not start with 256, discard it
+      return null;
+    }
+
+    return phone;
+  }
+
   void _submitPayment() async {
+    String? formattedPhone = formatPhoneNumber(payerPhoneController.text);
+
+    if (formattedPhone == null) {
+      _showErrorDialog('Invalid phone number.start with 0 or 7');
+      return;
+    }
     Map<String, dynamic> payment = {
       'clientId': 1,
       'paymentDate': DateTime.now().toIso8601String(),
@@ -239,6 +274,7 @@ class _PaymentFormState extends State<PaymentForm> {
       'reasonOfPayment': reasonController.text,
       'payerPhone': payerPhoneController.text,
       'balance': balanceController.text,
+      'nextpayment': nextDateController.text,
       'dueDate': '',
       'year': '',
     };
@@ -261,6 +297,22 @@ class _PaymentFormState extends State<PaymentForm> {
       try {
         await Future.delayed(Duration(seconds: 3)); // Simulate a delay
         await _submitToGoogleSheet(payment);
+        try {
+          final sendSMS = SendSMS();
+          final name = widget.paymentDetails["name"] ?? "";
+          final amount = payment["amount"] ?? "";
+          final reason = payment["reasonOfPayment"] ?? "";
+          final message =
+              "Dear $name, you have paid Ugx $amount -- $reason. Thank you - Emet";
+
+          final response = await sendSMS.sendSms(message, formattedPhone);
+        } catch (e) {
+          print('Error: $e');
+          _showErrorDialog(
+              'Failed to send SMS to client. Check internet or SMS balance.');
+        }
+        _createReceipt(payment);
+
         _createReceipt(payment);
         print('Data successfully uploaded and receipt created.');
       } catch (e) {
@@ -276,7 +328,7 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Future<void> _submitToGoogleSheet(Map<String, dynamic> payment) async {
-    final String url = 'https://sheetdb.io/api/v1/26tm679hezhut';
+    final String url = 'https://sheetdb.io/api/v1/k16v2dd0hgbvh';
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -286,9 +338,11 @@ class _PaymentFormState extends State<PaymentForm> {
         body: jsonEncode(<String, String>{
           'name': widget.paymentDetails["name"] ?? '',
           'phone': payment["payerPhone"] ?? '',
+          'apartment': '${widget.paymentDetails["apartment"]}',
           'amountInWords': payment["amountInWords"] ?? '',
           'reason': payment["reasonOfPayment"] ?? '',
           'balance': payment["balance"] ?? '',
+          'nextpayment': payment["nextpayment"] ?? '',
           'amount': payment["amount"] ?? '',
           'receiptNumber': receiptNumber.toString(),
           'date': payment["paymentDate"] ?? '',
@@ -339,7 +393,7 @@ class _PaymentFormState extends State<PaymentForm> {
         document.pageSettings.orientation = PdfPageOrientation.landscape;
 
         // Get the background image from assets
-        final ByteData data = await rootBundle.load('assets/receipt_bg.png');
+        final ByteData data = await rootBundle.load('assets/receipt.png');
         final Uint8List backgroundImageBytes = data.buffer.asUint8List();
         final PdfBitmap backgroundBitmap = PdfBitmap(backgroundImageBytes);
 
@@ -360,19 +414,58 @@ class _PaymentFormState extends State<PaymentForm> {
           Rect.fromLTWH(0, 0, imageWidth, imageHeight),
         );
 
-        // Add text and payment details to the document
-        final PdfFont font = PdfStandardFont(
-            PdfFontFamily.helvetica, 14); // Increased font size to 20
-        final PdfFont font2 = PdfStandardFont(
-            PdfFontFamily.helvetica, 16); // Increased font size to 20
-        // Define the sky blue color
-        final PdfColor skyBlue = PdfColor(0, 107, 179);
+        // Add new text at the top without pushing existing content
+        final PdfFont topTextFont =
+            PdfStandardFont(PdfFontFamily.helvetica, 14); // Font for top text
+        final PdfColor textColor = PdfColor(0, 107, 179); // Sky blue color
+        final PdfFont topTextFont2 = PdfStandardFont(
+          PdfFontFamily.helvetica,
+          15,
+          style: PdfFontStyle.bold,
+        );
+        // Font for top text
+        final PdfColor textColor2 = PdfColor(0, 0, 0); // Sky blue color
+        double topTextX = 0; // X position for the top text
+        double topTextY = 87; // Y position for the top text
 
-        // Set initial position
+        _drawParagraph(
+          page.graphics,
+          topTextFont2,
+          '                        ${(widget.paymentDetails["apartment"] ?? "").toString().toUpperCase()}',
+          topTextX,
+          topTextY,
+          textColor2,
+        );
+
+// Define the font for the next payment text
+        final PdfFont nextPaymentFont =
+            PdfStandardFont(PdfFontFamily.helvetica, 14);
+        final PdfColor nextPaymentColor =
+            PdfColor(255, 0, 0); // Red color for visibility
+
+// Define a new starting position for the next payment text
+        double nextPaymentX = 50;
+        double nextPaymentY = 300; // Starting Y position; adjust as needed
+
+// Add the next payment text
+        _drawParagraph(
+          page.graphics,
+          nextPaymentFont,
+          '                   ${payment["nextpayment"] ?? "N/A"}', // Change key if needed
+          nextPaymentX,
+          nextPaymentY,
+          nextPaymentColor,
+        );
+
+// If needed, update y position for subsequent content
+        double updatedYPosition =
+            nextPaymentY + 20; // Adjust based on new content
+
+        // Set initial position for existing content
         double x = 50;
         double y = 119;
 
-        // Add payment details in paragraphs with increased font size
+        // Existing content drawing logic
         String receiptforclient =
             '${widget.paymentDetails["name"] ?? ''},   Tel: ${payment["payerPhone"] ?? ""}';
 
@@ -421,21 +514,21 @@ class _PaymentFormState extends State<PaymentForm> {
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           '$receiptNumberText                                                                           $dateofreceipt',
           x,
           y,
-          skyBlue,
+          textColor,
         );
         y += 47; // Increased line spacing for readability
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           receiptforclient,
           x,
           y,
-          skyBlue,
+          textColor,
         );
         y += 22; // Increased line spacing for readability
 
@@ -446,22 +539,22 @@ class _PaymentFormState extends State<PaymentForm> {
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           '                           $firstamount', // Use the text that is properly wrapped and possibly truncated
           x,
           y,
-          skyBlue,
+          textColor,
         );
 
         y += 20;
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           '$secondamount', // Use the text that is properly wrapped and possibly truncated
           x,
           y,
-          skyBlue,
+          textColor,
         );
 
         y += 30;
@@ -469,27 +562,29 @@ class _PaymentFormState extends State<PaymentForm> {
         // Print the wrapped amount in words to the console
 
         final reasonText = payment["reasonOfPayment"] ?? "";
-        final splitStringsReason = _splitText(reasonText, 60, 80);
+        final splitStringsReason = _splitText(reasonText, 40, 80);
         final firstreason = splitStringsReason[0];
         final secondreason = splitStringsReason[1];
+        print('-------------FIRST REASON -------$firstreason');
+        print('-------------SECOND REASON -------$firstreason');
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           '                       $firstreason',
           x,
           y,
-          skyBlue,
+          textColor,
         );
         y += 20;
 
         _drawParagraph(
           page.graphics,
-          font,
+          topTextFont,
           ' $secondreason',
           x,
           y,
-          skyBlue,
+          textColor,
         );
         y += 30;
 
@@ -497,23 +592,23 @@ class _PaymentFormState extends State<PaymentForm> {
 
         _drawParagraph(
           page.graphics,
-          font2,
+          topTextFont,
           '                                                                              ${payment["balance"] ?? ""}',
           x,
           y,
-          skyBlue,
+          textColor,
         );
-        y += 25;
+        y += 36;
 
         _drawParagraph(
           page.graphics,
-          font2,
+          topTextFont,
           '            ${payment["amount"] ?? ""}',
           x,
           y,
-          skyBlue,
+          textColor,
         );
-        y += 7;
+        y += 10;
 
         // Save the PDF to a file in the "receipts" subfolder
         final List<int> bytes = await document.save();
@@ -576,14 +671,12 @@ class _PaymentFormState extends State<PaymentForm> {
 
   List<String> _splitText(
       String text, int firstMaxLength, int secondMaxLength) {
-    // Split text into words
-    final words = text.split(' ');
-
     // Helper function to join words into a single line of max length
     String joinWords(List<String> words, int maxLength) {
       String line = '';
       for (var word in words) {
-        if ((line.length + word.length + 1) > maxLength) {
+        // Check if adding this word exceeds the maximum length
+        if ((line.length + word.length + (line.isEmpty ? 0 : 1)) > maxLength) {
           break;
         }
         if (line.isNotEmpty) {
@@ -593,6 +686,9 @@ class _PaymentFormState extends State<PaymentForm> {
       }
       return line;
     }
+
+    // Split text into words
+    final words = text.split(' ');
 
     // Get the first line
     final firstLine = joinWords(words, firstMaxLength);
@@ -605,8 +701,11 @@ class _PaymentFormState extends State<PaymentForm> {
     final secondLine = joinWords(remainingWordsAfterFirstLine, secondMaxLength);
 
     // Remove words already used in the second line
-    final remainingWordsAfterSecondLine =
-        text.substring(firstLine.length + secondLine.length).trim();
+    final remainingWordsAfterSecondLine = remainingWordsAfterFirstLine
+        .skipWhile((word) =>
+            (secondLine.length + word.length + (secondLine.isEmpty ? 0 : 1)) <=
+            secondMaxLength)
+        .join(' ');
 
     return [firstLine, secondLine, remainingWordsAfterSecondLine];
   }
@@ -769,7 +868,7 @@ class _PaymentFormState extends State<PaymentForm> {
   }
 
   Future<void> _submitToGoogleSheetTest() async {
-    final String url = 'https://sheetdb.io/api/v1/26tm679hezhut';
+    final String url = 'https://sheetdb.io/api/v1/k16v2dd0hgbvh';
     try {
       final response = await http.post(
         Uri.parse(url),

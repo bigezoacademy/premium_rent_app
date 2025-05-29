@@ -1,6 +1,6 @@
-import 'package:exodus_app/pages/AppLayout.dart';
+import 'package:emet/pages/AppLayout.dart';
 import 'package:flutter/material.dart';
-import 'package:exodus_app/database_helper.dart';
+import 'package:emet/database_helper.dart';
 
 class Analytics extends StatefulWidget {
   @override
