@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'google_signin_button.dart'; // Import the GoogleSignInButton
+import 'pages/manager_dashboard.dart'; // Import the ManagerDashboard
+import 'pages/owner_dashboard.dart'; // Import the OwnerDashboard
+import 'pages/tenant_dashboard.dart'; // Import the TenantDashboard
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -62,11 +66,30 @@ class _LoginScreenState extends State<LoginScreen> {
         error = '';
       });
       try {
-        await AuthService().signInWithEmail(
+        final user = await AuthService().signInWithEmail(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
-        Navigator.pop(context);
+        if (user != null) {
+          // Fetch user role from Firestore
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          final role = doc.data()?['role'] ?? 'Tenant';
+          Widget dashboard;
+          if (role == 'Property Manager') {
+            dashboard = ManagerDashboard();
+          } else if (role == 'Property Owner') {
+            dashboard = OwnerDashboard();
+          } else {
+            dashboard = TenantDashboard();
+          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => dashboard),
+          );
+        }
       } catch (e) {
         setState(() {
           error = e.toString();
