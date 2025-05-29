@@ -82,6 +82,8 @@ flutter:
     - assets/receipt.png
     - assets/icon.png
     - assets/ic_launcher.png
+    - assets/google.png
+    - assets/googlein.png
     
 
   # To add assets to your application, add an assets section, like this:

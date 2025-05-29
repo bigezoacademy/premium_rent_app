@@ -25,7 +25,7 @@ class DeveloperDashboard extends StatelessWidget {
             context,
             icon: Icons.attach_money,
             title: 'Total Revenue (All Properties)',
-            color: Color(0xFF8AC611),
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
@@ -39,14 +39,14 @@ class DeveloperDashboard extends StatelessWidget {
             context,
             icon: Icons.warning_amber,
             title: 'Overdue/Disabled Accounts',
-            color: Colors.black,
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
             context,
             icon: Icons.analytics,
             title: 'Platform Analytics',
-            color: Color(0xFF8AC611),
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
@@ -60,7 +60,7 @@ class DeveloperDashboard extends StatelessWidget {
             context,
             icon: Icons.settings,
             title: 'System Settings',
-            color: Colors.black,
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
         ],

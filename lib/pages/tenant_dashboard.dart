@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import '../auth_service.dart';
+import '../main.dart';
 
 class TenantDashboard extends StatelessWidget {
+  final VoidCallback? onLogout;
+  const TenantDashboard({Key? key, this.onLogout}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,7 +16,19 @@ class TenantDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: () {}, // TODO: Implement logout
+            tooltip: 'Logout',
+            onPressed: () async {
+              await AuthService().signOut();
+              if (onLogout != null) {
+                onLogout!();
+              } else {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
           ),
         ],
       ),
@@ -25,7 +42,7 @@ class TenantDashboard extends StatelessWidget {
             context,
             icon: Icons.payment,
             title: 'Pay Rent',
-            color: Color(0xFF8AC611),
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
@@ -39,14 +56,14 @@ class TenantDashboard extends StatelessWidget {
             context,
             icon: Icons.history,
             title: 'Billing History',
-            color: Colors.black,
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
             context,
             icon: Icons.notifications,
             title: 'Notifications',
-            color: Color(0xFF8AC611),
+            color: Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(

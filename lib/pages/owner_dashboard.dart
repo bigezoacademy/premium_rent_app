@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import '../auth_service.dart';
+import '../main.dart';
 
 class OwnerDashboard extends StatelessWidget {
+  final VoidCallback? onLogout;
+  const OwnerDashboard({Key? key, this.onLogout}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,42 +16,54 @@ class OwnerDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: () {}, // TODO: Implement logout
+            tooltip: 'Logout',
+            onPressed: () async {
+              await AuthService().signOut();
+              if (onLogout != null) {
+                onLogout!();
+              } else {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
           ),
         ],
       ),
       body: ListView(
-        padding: EdgeInsets.all(24),
-        children: [
+        padding: const EdgeInsets.all(24),
+        children: <Widget>[
           _dashboardHeader('Welcome, Owner!',
               'View analytics and revenue for your properties.'),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           _dashboardCard(
             context,
             icon: Icons.analytics,
             title: 'Financial Analytics',
-            color: Color(0xFF8AC611),
+            color: const Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
             context,
             icon: Icons.bar_chart,
             title: 'Monthly Rent Collected',
-            color: Color(0xFFC65611),
+            color: const Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
             context,
             icon: Icons.account_balance_wallet,
             title: 'Manager Revenue Tracking',
-            color: Colors.black,
+            color: const Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
           _dashboardCard(
             context,
             icon: Icons.info_outline,
             title: 'Property Performance',
-            color: Color(0xFF8AC611),
+            color: const Color(0xFFC65611),
             onTap: () {}, // TODO: Implement
           ),
         ],
@@ -72,20 +89,21 @@ class OwnerDashboard extends StatelessWidget {
   Widget _dashboardCard(BuildContext context,
       {required IconData icon,
       required String title,
-      required Color color,
+      Color? color,
       required VoidCallback onTap}) {
+    final Color iconColor = color ?? const Color(0xFFC65611);
     return Card(
       elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 12),
+      margin: const EdgeInsets.symmetric(vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color, size: 28),
+          backgroundColor: iconColor.withOpacity(0.1),
+          child: Icon(icon, color: iconColor, size: 28),
         ),
         title: Text(title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        trailing: Icon(Icons.arrow_forward_ios, color: color),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        trailing: Icon(Icons.arrow_forward_ios, color: iconColor),
         onTap: onTap,
       ),
     );

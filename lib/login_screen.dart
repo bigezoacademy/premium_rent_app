@@ -71,15 +71,18 @@ class _LoginScreenState extends State<LoginScreen> {
           password: passwordController.text.trim(),
         );
         if (user != null) {
-          // Fetch user role from Firestore
+          // Fetch user role and info from Firestore
           final doc = await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get();
-          final role = doc.data()?['role'] ?? 'Tenant';
+          final data = doc.data() ?? {};
+          final role = data['role'] ?? 'Tenant';
+          final name = data['name'] ?? '';
+          final email = data['email'] ?? user.email ?? '';
           Widget dashboard;
           if (role == 'Property Manager') {
-            dashboard = ManagerDashboard();
+            dashboard = ManagerDashboard(userName: name, userEmail: email);
           } else if (role == 'Property Owner') {
             dashboard = OwnerDashboard();
           } else {

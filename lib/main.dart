@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'signup_screen.dart';
-import 'login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'pages/tenant_dashboard.dart';
+import 'login_screen.dart';
+import 'signup_screen.dart';
+import 'auth_service.dart';
 import 'pages/manager_dashboard.dart';
-import 'pages/owner_dashboard.dart';
-import 'pages/developer_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,13 +36,94 @@ class MyApp extends StatelessWidget {
         colorScheme:
             ColorScheme.fromSwatch().copyWith(secondary: Color(0xFFC65611)),
         scaffoldBackgroundColor: Colors.white,
+        fontFamily: 'Trebuchet MS',
+        textTheme: ThemeData.light().textTheme.apply(
+              fontFamily: 'Trebuchet MS',
+            ),
+        appBarTheme: AppBarTheme(
+          titleTextStyle: TextStyle(
+            fontFamily: 'Trebuchet MS',
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
+          ),
+        ),
       ),
       home: AuthHomeScreen(),
     );
   }
 }
 
-class AuthHomeScreen extends StatelessWidget {
+class AuthHomeScreen extends StatefulWidget {
+  @override
+  State<AuthHomeScreen> createState() => _AuthHomeScreenState();
+}
+
+class _AuthHomeScreenState extends State<AuthHomeScreen> {
+  bool isLoading = false;
+  String? errorMessage;
+
+  Future<void> _handleGoogleAuth() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+    try {
+      final user = await AuthService().signInWithGoogle();
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => ManagerDashboard(onLogout: _handleLogout)),
+        );
+      } else {
+        setState(() {
+          errorMessage = 'Authentication failed. Please try again.';
+        });
+      }
+    } catch (e) {
+      // Detect redirect_uri_mismatch and show a friendly message
+      String msg = e.toString();
+      if (msg.contains('redirect_uri_mismatch') ||
+          msg.contains('invalid request')) {
+        errorMessage =
+            'Google sign-in failed due to a configuration error (redirect_uri_mismatch).\nPlease contact support or check your Google API Console settings.';
+      } else {
+        errorMessage = msg;
+      }
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void _handleLogout() async {
+    await AuthService().signOut();
+    setState(() {
+      errorMessage = null;
+      isLoading = false;
+    });
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,128 +133,56 @@ class AuthHomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF8AC611),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text('Sign Up'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SignUpScreen()),
-                  );
-                },
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFC65611),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text('Login'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
-                  );
-                },
-              ),
               SizedBox(height: 32),
-              Text('Access Dashboards Directly (No Login Required)',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Color(0xFFC65611))),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF8AC611),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text('Tenant'),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => TenantDashboard()));
-                    },
+              if (errorMessage != null) ...[
+                Container(
+                  margin: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    border: Border.all(color: Colors.red[200]!),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFC65611),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red[400]),
+                      SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          errorMessage!,
+                          style:
+                              TextStyle(color: Colors.red[800], fontSize: 15),
+                        ),
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text('Manager'),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ManagerDashboard()));
-                    },
+                    ],
                   ),
-                  SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
+                ),
+              ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  elevation: 0,
+                ),
+                child: isLoading
+                    ? SizedBox(
+                        height: 28,
+                        width: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Image.asset(
+                        'assets/googlein.png',
+                        height: 40,
+                        width: 180,
+                        fit: BoxFit.contain,
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text('Owner'),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => OwnerDashboard()));
-                    },
-                  ),
-                  SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Color(0xFF1A237E), // Deep blue for G-Realm Studio
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text('G-Realm Studio'),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => DeveloperDashboard()));
-                    },
-                  ),
-                ],
+                onPressed: isLoading ? null : _handleGoogleAuth,
               ),
               SizedBox(height: 24),
-              Text(
-                'You can access all dashboards above without authentication for now. Once Firebase Auth is configured, these can be restricted.',
-                style: TextStyle(color: Colors.black54, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
             ],
           ),
         ),
