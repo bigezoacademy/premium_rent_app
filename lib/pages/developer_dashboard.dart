@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../auth_service.dart';
+import '../main.dart';
 
 class DeveloperDashboard extends StatelessWidget {
+  final VoidCallback? onLogout;
+  const DeveloperDashboard({Key? key, this.onLogout}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -11,59 +17,43 @@ class DeveloperDashboard extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
-            onPressed: () {}, // TODO: Implement logout
+            tooltip: 'Logout',
+            onPressed: () async {
+              await AuthService().signOut();
+              if (onLogout != null) {
+                onLogout!();
+              } else {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.all(24),
-        children: [
-          _dashboardHeader('Welcome, G-Realm Studio!',
-              'Monitor platform revenue, subscriptions, and analytics.'),
-          SizedBox(height: 24),
-          _dashboardCard(
-            context,
-            icon: Icons.attach_money,
-            title: 'Total Revenue (All Properties)',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.subscriptions,
-            title: 'Manager Subscriptions',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.warning_amber,
-            title: 'Overdue/Disabled Accounts',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.analytics,
-            title: 'Platform Analytics',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.email,
-            title: 'Email & SMS Alerts',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.settings,
-            title: 'System Settings',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('properties').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error loading properties'));
+          }
+          final properties = snapshot.data?.docs ?? [];
+          return ListView.builder(
+            itemCount: properties.length,
+            itemBuilder: (context, index) {
+              final doc = properties[index];
+              return ListTile(
+                title: Text(doc['name'] ?? 'Unnamed'),
+                subtitle: Text(doc['location'] ?? ''),
+              );
+            },
+          );
+        },
       ),
     );
   }

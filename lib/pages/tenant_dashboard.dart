@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../auth_service.dart';
 import '../main.dart';
 
@@ -32,48 +33,27 @@ class TenantDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.all(24),
-        children: [
-          _dashboardHeader('Welcome, Tenant!',
-              'Manage your rent, payments, and notifications.'),
-          SizedBox(height: 24),
-          _dashboardCard(
-            context,
-            icon: Icons.payment,
-            title: 'Pay Rent',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.receipt_long,
-            title: 'My Receipts',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.history,
-            title: 'Billing History',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.notifications,
-            title: 'Notifications',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-          _dashboardCard(
-            context,
-            icon: Icons.email,
-            title: 'Email Confirmations',
-            color: Color(0xFFC65611),
-            onTap: () {}, // TODO: Implement
-          ),
-        ],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('properties').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error loading properties'));
+          }
+          final properties = snapshot.data?.docs ?? [];
+          return ListView.builder(
+            itemCount: properties.length,
+            itemBuilder: (context, index) {
+              final doc = properties[index];
+              return ListTile(
+                title: Text(doc['name'] ?? 'Unnamed'),
+                subtitle: Text(doc['location'] ?? ''),
+              );
+            },
+          );
+        },
       ),
     );
   }
