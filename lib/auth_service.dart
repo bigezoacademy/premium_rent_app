@@ -114,4 +114,22 @@ class AuthService {
   Stream<User?> get userChanges => _auth.userChanges();
 
   String? currentUserId() => _auth.currentUser?.uid;
+
+  Future<void> ensureAdminUserExists() async {
+    final adminEmail = 'grealmkids@gmail.com';
+    final userQuery = await _firestore
+        .collection('users')
+        .where('email', isEqualTo: adminEmail)
+        .limit(1)
+        .get();
+    if (userQuery.docs.isEmpty) {
+      await _firestore.collection('users').add({
+        'email': adminEmail,
+        'name': 'G-Realm Studio',
+        'role': 'Developer',
+        'phone': '+256773913902',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
 }

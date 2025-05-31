@@ -116,9 +116,11 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
   }
 
   Widget _propertySelectionStep(BuildContext context) {
+    final userEmail = widget.userEmail;
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('properties')
+          .where('managerEmail', isEqualTo: userEmail)
           .orderBy('name', descending: false)
           .snapshots(),
       builder: (context, snapshot) {
@@ -237,7 +239,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                   context: context,
                   builder: (context) {
                     return StatefulBuilder(
-                      builder: (context, setStateDialog) {
+                      builder: (context, setState) {
                         Future<void> pickImages() async {
                           final ImagePicker picker = ImagePicker();
                           final List<XFile> images =
@@ -248,11 +250,11 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                   content: Text(
                                       'You can only select up to 5 images.')),
                             );
-                            setStateDialog(() {
+                            setState(() {
                               selectedImages = images.sublist(0, 5);
                             });
                           } else {
-                            setStateDialog(() {
+                            setState(() {
                               selectedImages = images;
                             });
                           }
@@ -355,7 +357,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                     decoration:
                                         InputDecoration(hintText: 'Category'),
                                     value: categoryValue,
-                                    items: [
+                                    items: const [
                                       DropdownMenuItem(
                                           value: 'Residential Rentals',
                                           child: Text('Residential Rentals')),
@@ -372,9 +374,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                               Text('Mall Commercial Spaces')),
                                     ],
                                     onChanged: (val) {
-                                      setStateDialog(() {
+                                      setState(() {
                                         categoryValue = val;
-                                        // Reset kitchen value if category changes
                                         if (categoryValue !=
                                                 'Residential Rentals' &&
                                             categoryValue !=
@@ -394,14 +395,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                       decoration:
                                           InputDecoration(hintText: 'Kitchen'),
                                       value: kitchenValue,
-                                      items: [
+                                      items: const [
                                         DropdownMenuItem(
                                             value: 'Yes', child: Text('Yes')),
                                         DropdownMenuItem(
                                             value: 'No', child: Text('No')),
                                       ],
                                       onChanged: (val) {
-                                        setStateDialog(() {
+                                        setState(() {
                                           kitchenValue = val;
                                         });
                                       },
@@ -467,7 +468,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                   ? null
                                   : () async {
                                       if (_formKey.currentState!.validate()) {
-                                        setStateDialog(() {
+                                        setState(() {
                                           isLoading = true;
                                           uploadProgress = 0;
                                         });
@@ -477,8 +478,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                           uploadedPhotoUrls =
                                               await uploadImages(selectedImages,
                                                   (p) {
-                                            setStateDialog(
-                                                () => uploadProgress = p);
+                                            setState(() => uploadProgress = p);
                                           });
                                         } catch (e) {
                                           ScaffoldMessenger.of(context)
@@ -521,7 +521,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                           });
                                           Navigator.pop(context);
                                         } catch (e) {
-                                          setStateDialog(() {
+                                          setState(() {
                                             isLoading = false;
                                             uploadProgress = 0;
                                           });
@@ -575,7 +575,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
       context: context,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (context, setState) {
             Future<void> pickImages() async {
               final ImagePicker picker = ImagePicker();
               final List<XFile> images = await picker.pickMultiImage();
@@ -585,12 +585,12 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       content:
                           Text('You can only select up to 5 images in total.')),
                 );
-                setStateDialog(() {
+                setState(() {
                   selectedImages =
                       images.sublist(0, 5 - uploadedPhotoUrls.length);
                 });
               } else {
-                setStateDialog(() {
+                setState(() {
                   selectedImages = images;
                 });
               }
@@ -674,7 +674,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                               child: Text('Mall Commercial Spaces')),
                         ],
                         onChanged: (val) {
-                          setStateDialog(() {
+                          setState(() {
                             categoryController.text = val ?? '';
                           });
                         },
@@ -692,7 +692,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'No', child: Text('No')),
                           ],
                           onChanged: (val) {
-                            setStateDialog(() {
+                            setState(() {
                               // kitchenController.text = val ?? '';
                             });
                           },
@@ -719,7 +719,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                     padding: EdgeInsets.zero,
                                     constraints: BoxConstraints(),
                                     onPressed: () {
-                                      setStateDialog(() {
+                                      setState(() {
                                         uploadedPhotoUrls.remove(url);
                                       });
                                     },
@@ -761,7 +761,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       ? null
                       : () async {
                           if (_formKey.currentState!.validate()) {
-                            setStateDialog(() => isLoading = true);
+                            setState(() => isLoading = true);
                             _showBusy(true);
                             try {
                               final newPhotoUrls =
@@ -790,7 +790,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                               });
                               Navigator.pop(context);
                             } catch (e) {
-                              setStateDialog(() => isLoading = false);
+                              setState(() => isLoading = false);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content:
@@ -1079,7 +1079,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
       context: context,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (context, setState) {
             return AlertDialog(
               title: Text('Set Rent & Discounts'),
               titleTextStyle: TextStyle(
@@ -1124,8 +1124,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           DropdownMenuItem(
                               value: 'Fixed', child: Text('Fixed Amount')),
                         ],
-                        onChanged: (val) =>
-                            setStateDialog(() => discountType = val),
+                        onChanged: (val) => setState(() => discountType = val),
                       ),
                       SizedBox(height: 8),
                       if (discountType != null && discountType != 'None')
@@ -1166,8 +1165,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No')),
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => kitchen = val),
+                          onChanged: (val) => setState(() => kitchen = val),
                           validator: (v) =>
                               v == null || v.isEmpty ? 'Required' : null,
                         ),
@@ -1179,8 +1177,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => furnished = val),
+                          onChanged: (val) => setState(() => furnished = val),
                         ),
                         SizedBox(height: 8),
                         DropdownButtonFormField<String>(
@@ -1191,8 +1188,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => parking = val),
+                          onChanged: (val) => setState(() => parking = val),
                         ),
                         SizedBox(height: 8),
                         DropdownButtonFormField<String>(
@@ -1203,8 +1199,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => utilities = val),
+                          onChanged: (val) => setState(() => utilities = val),
                         ),
                         SizedBox(height: 8),
                         DropdownButtonFormField<String>(
@@ -1214,8 +1209,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => balcony = val),
+                          onChanged: (val) => setState(() => balcony = val),
                         ),
                         SizedBox(height: 8),
                         TextFormField(
@@ -1250,8 +1244,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
-                          onChanged: (val) =>
-                              setStateDialog(() => powerBackup = val),
+                          onChanged: (val) => setState(() => powerBackup = val),
                         ),
                       ],
                       if (category == 'Mall Commercial Spaces') ...[
@@ -1276,7 +1269,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             DropdownMenuItem(value: 'No', child: Text('No'))
                           ],
                           onChanged: (val) =>
-                              setStateDialog(() => anchorProximity = val),
+                              setState(() => anchorProximity = val),
                         ),
                         SizedBox(height: 8),
                         TextFormField(
@@ -1311,7 +1304,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       ? null
                       : () async {
                           if (_formKey.currentState!.validate()) {
-                            setStateDialog(() => isLoading = true);
+                            setState(() => isLoading = true);
                             _showBusy(true);
                             try {
                               await FirebaseFirestore.instance
@@ -1519,9 +1512,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
   Widget _tenantDatabaseSection(BuildContext context, String propertyId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('properties')
-          .doc(propertyId)
           .collection('tenants')
+          .where('propertyId', isEqualTo: propertyId)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1609,8 +1601,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                         tooltip: 'Delete',
                         onPressed: () async {
                           await FirebaseFirestore.instance
-                              .collection('properties')
-                              .doc(propertyId)
                               .collection('tenants')
                               .doc(t.id)
                               .delete();

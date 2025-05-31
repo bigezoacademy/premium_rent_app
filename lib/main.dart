@@ -7,25 +7,92 @@ import 'pages/tenant_property_select.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'pages/owner_dashboard.dart';
 import 'pages/developer_dashboard.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) {
-    await Firebase.initializeApp(
-      options: FirebaseOptions(
-        apiKey: "AIzaSyBtP-9epyGRNMnAv49qQ2SjeRqbKW8Pzvk",
-        authDomain: "premium-rent-app.firebaseapp.com",
-        projectId: "premium-rent-app",
-        storageBucket: "premium-rent-app.firebasestorage.app",
-        messagingSenderId: "191699518937",
-        appId: "1:191699518937:web:099d0a08271e45f4d805c8",
-        measurementId: "G-YGP85GDL9L",
-      ),
-    );
-  } else {
-    await Firebase.initializeApp();
+  try {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: FirebaseOptions(
+          apiKey: firebaseWebOptions['apiKey']!,
+          authDomain: firebaseWebOptions['authDomain']!,
+          projectId: firebaseWebOptions['projectId']!,
+          storageBucket: firebaseWebOptions['storageBucket']!,
+          messagingSenderId: firebaseWebOptions['messagingSenderId']!,
+          appId: firebaseWebOptions['appId']!,
+          measurementId: firebaseWebOptions['measurementId']!,
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+    await AuthService().ensureAdminUserExists();
+    // If you have any other async setup, keep it here
+  } catch (e, st) {
+    print('Startup error:');
+    print(e);
+    print(st);
   }
   runApp(MyApp());
+}
+
+Future<void> ensureCollectionsExist() async {
+  final firestore = FirebaseFirestore.instance;
+  // Create a dummy doc in each collection if it doesn't exist, then delete it (to ensure collection exists)
+  final collections = ['properties', 'billing', 'credentials', 'tenants'];
+  for (final col in collections) {
+    final ref = firestore.collection(col).doc('__init__');
+    final doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({'init': true});
+      await ref.delete();
+    }
+  }
+}
+
+Future<void> ensureCollectionsAndLinksForUser(
+    String userId, String userEmail, String userName, String role) async {
+  final firestore = FirebaseFirestore.instance;
+  // Ensure collections exist
+  final collections = ['properties', 'billing', 'credentials', 'tenants'];
+  for (final col in collections) {
+    final ref = firestore.collection(col).doc('__init__');
+    final doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({'init': true});
+      await ref.delete();
+    }
+  }
+  // Auto-link user to billing and credentials collections only (no starter property/tenant)
+  if (role == 'Property Manager' || role == 'Tenant') {
+    final billingQuery = await firestore
+        .collection('billing')
+        .where('userEmail', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+    if (billingQuery.docs.isEmpty) {
+      await firestore.collection('billing').add({
+        'userEmail': userEmail,
+        'userUid': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'role': role,
+      });
+    }
+    final credentialsQuery = await firestore
+        .collection('credentials')
+        .where('userEmail', isEqualTo: userEmail)
+        .limit(1)
+        .get();
+    if (credentialsQuery.docs.isEmpty) {
+      await firestore.collection('credentials').add({
+        'userEmail': userEmail,
+        'userUid': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'role': role,
+      });
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -83,7 +150,6 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null) {
-        // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -92,28 +158,34 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
         final role = data['role'] ?? 'Tenant';
         final name = data['name'] ?? '';
         final email = data['email'] ?? user.email ?? '';
-        // Show detected role
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Detected role: ' + role),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        Widget dashboard;
+        // Auto-link user to collections (no starter property/tenant)
+        await ensureCollectionsAndLinksForUser(user.uid, email, name, role);
+        // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
         if (email == 'grealmkids@gmail.com') {
-          dashboard = DeveloperDashboard();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DeveloperDashboard()),
+          );
         } else if (role == 'Property Manager') {
-          dashboard = ManagerDashboard(userName: name, userEmail: email);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    ManagerDashboard(userName: name, userEmail: email)),
+          );
         } else if (role == 'Property Owner') {
-          dashboard = OwnerDashboard();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => OwnerDashboard()),
+          );
         } else {
-          dashboard =
-              TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => TenantPropertySelectScreen(
+                    userId: user.uid, userEmail: email)),
+          );
         }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => dashboard),
-        );
       } else {
         setState(() {
           errorMessage = 'Authentication failed. Please try again.';

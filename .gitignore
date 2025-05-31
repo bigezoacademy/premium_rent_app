@@ -48,3 +48,10 @@ app.*.map.json
 # Ignore Gradle build output directory
 build
 assets/exodus_googledrive.json
+
+# Firebase/Google API keys and config
+lib/firebase_options.dart
+.env
+.env.*
+*.env
+firebase_keys.json
