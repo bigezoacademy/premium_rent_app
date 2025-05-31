@@ -4,7 +4,8 @@ import 'auth_service.dart';
 import 'google_signin_button.dart'; // Import the GoogleSignInButton
 import 'pages/manager_dashboard.dart'; // Import the ManagerDashboard
 import 'pages/owner_dashboard.dart'; // Import the OwnerDashboard
-import 'pages/tenant_dashboard.dart'; // Import the TenantDashboard
+import 'pages/tenant_property_select.dart'; // Import the TenantPropertySelectScreen
+import 'pages/developer_dashboard.dart'; // Import the DeveloperDashboard
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -80,13 +81,29 @@ class _LoginScreenState extends State<LoginScreen> {
           final role = data['role'] ?? 'Tenant';
           final name = data['name'] ?? '';
           final email = data['email'] ?? user.email ?? '';
+          // Show detected role
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Detected role: ' + role),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          if (email == 'grealmkids@gmail.com') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => DeveloperDashboard()),
+            );
+            return;
+          }
           Widget dashboard;
           if (role == 'Property Manager') {
             dashboard = ManagerDashboard(userName: name, userEmail: email);
           } else if (role == 'Property Owner') {
             dashboard = OwnerDashboard();
           } else {
-            dashboard = TenantDashboard();
+            // Route tenant to property selection screen
+            dashboard =
+                TenantPropertySelectScreen(userId: user.uid, userEmail: email);
           }
           Navigator.pushReplacement(
             context,

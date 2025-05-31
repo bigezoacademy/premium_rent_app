@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'login_screen.dart';
-import 'signup_screen.dart';
 import 'auth_service.dart';
 import 'pages/manager_dashboard.dart';
+import 'pages/tenant_property_select.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pages/owner_dashboard.dart';
+import 'pages/developer_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,10 +83,43 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
     try {
       final user = await AuthService().signInWithGoogle();
       if (user != null) {
+        // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
+        if (user.email == 'grealmkids@gmail.com') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DeveloperDashboard()),
+          );
+          return;
+        }
+
+        // Fetch user role and info from Firestore
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final data = doc.data() ?? {};
+        final role = data['role'] ?? 'Tenant';
+        final name = data['name'] ?? '';
+        final email = data['email'] ?? user.email ?? '';
+        // Show detected role
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Detected role: ' + role),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Widget dashboard;
+        if (role == 'Property Manager') {
+          dashboard = ManagerDashboard(userName: name, userEmail: email);
+        } else if (role == 'Property Owner') {
+          dashboard = OwnerDashboard();
+        } else {
+          dashboard =
+              TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+        }
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-              builder: (context) => ManagerDashboard(onLogout: _handleLogout)),
+          MaterialPageRoute(builder: (context) => dashboard),
         );
       } else {
         setState(() {
@@ -99,16 +134,15 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
         errorMessage =
             'Google sign-in failed due to a configuration error (redirect_uri_mismatch).\nPlease contact support or check your Google API Console settings.';
       } else {
-        errorMessage = msg;
+        setState(() {
+          errorMessage = e.toString();
+        });
       }
+    } finally {
       setState(() {
         isLoading = false;
       });
-      return;
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 
   void _handleLogout() async {

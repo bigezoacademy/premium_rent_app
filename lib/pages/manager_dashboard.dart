@@ -142,7 +142,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                 backgroundColor: m3Primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 elevation: 0,
               ),
@@ -209,7 +209,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                 backgroundColor: Color(0xFFC65611),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 elevation: 0,
               ),
@@ -399,14 +399,21 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                                 .text
                                                 .trim(),
                                             'category': categoryValue,
-                                            'kitchen': (categoryValue ==
-                                                        'Residential Rentals' ||
-                                                    categoryValue ==
-                                                        'Residential Apartments')
-                                                ? kitchenValue
-                                                : null,
+                                            // Only add 'kitchen' for residential categories
+                                            if (categoryValue ==
+                                                    'Residential Rentals' ||
+                                                categoryValue ==
+                                                    'Residential Apartments')
+                                              'kitchen': kitchenValue,
                                             'createdAt':
                                                 FieldValue.serverTimestamp(),
+                                            // Add manager details
+                                            'managerName':
+                                                widget.userName ?? '',
+                                            'managerEmail':
+                                                widget.userEmail ?? '',
+                                            'managerUid':
+                                                AuthService().currentUserId(),
                                           });
                                           Navigator.pop(context);
                                         } catch (e) {
@@ -453,8 +460,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         TextEditingController(text: doc['ownerPhone']);
     TextEditingController categoryController =
         TextEditingController(text: doc['category'] ?? '');
-    TextEditingController kitchenController =
-        TextEditingController(text: doc['kitchen'] ?? '');
     bool isLoading = false;
     await showDialog(
       context: context,
@@ -539,16 +544,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           categoryController.text == 'Residential Apartments')
                         DropdownButtonFormField<String>(
                           decoration: InputDecoration(hintText: 'Kitchen'),
-                          value: kitchenController.text.isNotEmpty
-                              ? kitchenController.text
-                              : null,
+                          value: null,
                           items: [
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
                             DropdownMenuItem(value: 'No', child: Text('No')),
                           ],
                           onChanged: (val) {
                             setStateDialog(() {
-                              kitchenController.text = val ?? '';
+                              // kitchenController.text = val ?? '';
                             });
                           },
                           validator: (v) =>
@@ -596,7 +599,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                             'Residential Rentals' ||
                                         categoryController.text ==
                                             'Residential Apartments')
-                                    ? kitchenController.text
+                                    ? null
                                     : null,
                               });
                               Navigator.pop(context);
@@ -697,42 +700,55 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                     (ownerPhone.isNotEmpty ? 'Phone: $ownerPhone\n' : '') +
                     'Oversee property, billing, and analytics.'),
             SizedBox(height: 24),
-            _dashboardCard(
-              context,
-              icon: Icons.apartment,
-              title: 'Manage Units',
-              onTap: () {}, // TODO: Implement
-            ),
-            _dashboardCard(
-              context,
-              icon: Icons.category,
-              title: 'Rental Categories',
-              onTap: () {}, // TODO: Implement
-            ),
-            _dashboardCard(
-              context,
-              icon: Icons.attach_money,
-              title: 'Set Rent & Discounts',
-              onTap: () {
-                if (selectedPropertyId != null) {
-                  FirebaseFirestore.instance
-                      .collection('properties')
-                      .doc(selectedPropertyId)
-                      .get()
-                      .then((doc) {
-                    final data = doc.data() as Map<String, dynamic>?;
-                    final category = data?['category'] ?? '';
-                    if (category.isNotEmpty) {
-                      _showSetRentAndDiscountsDialog(
-                          context, selectedPropertyId!, category);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Property category missing...')),
-                      );
-                    }
-                  });
-                }
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: _dashboardCard(
+                    context,
+                    icon: Icons.person_add,
+                    title: 'Add Tenant',
+                    color: m3Primary,
+                    onTap: () {
+                      if (selectedPropertyId != null &&
+                          selectedPropertyName != null) {
+                        _addTenantDialog(context, selectedPropertyId!,
+                            selectedPropertyName!);
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _dashboardCard(
+                    context,
+                    icon: Icons.attach_money,
+                    title: 'Set Rent & Discounts',
+                    color: m3Secondary,
+                    onTap: () {
+                      if (selectedPropertyId != null) {
+                        FirebaseFirestore.instance
+                            .collection('properties')
+                            .doc(selectedPropertyId)
+                            .get()
+                            .then((doc) {
+                          final data = doc.data() as Map<String, dynamic>?;
+                          final category = data?['category'] ?? '';
+                          if (category.isNotEmpty) {
+                            _showSetRentAndDiscountsDialog(
+                                context, selectedPropertyId!, category);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Property category missing...')),
+                            );
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
             _dashboardCard(
               context,
@@ -1138,6 +1154,41 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           'anchorProximity': anchorProximity,
                           'footTraffic': footTrafficController.text.trim(),
                         });
+                        // Also update the spaces subcollection for relevant properties
+                        await FirebaseFirestore.instance
+                            .collection('properties')
+                            .doc(propertyId)
+                            .collection('spaces')
+                            .doc(
+                                propertyId) // Assuming space doc ID is same as property ID
+                            .set({
+                          'propertyId': propertyId,
+                          'propertyName': selectedPropertyName,
+                          'rent': rentController.text.trim(),
+                          'deposit': depositController.text.trim(),
+                          'leaseDuration': leaseDurationController.text.trim(),
+                          'discountType': discountType,
+                          'discountValue': discountValueController.text.trim(),
+                          'serviceCharge': serviceChargeController.text.trim(),
+                          // Category-specific
+                          'bedrooms': bedroomsController.text.trim(),
+                          'bathrooms': bathroomsController.text.trim(),
+                          'kitchen': (category == 'Residential Rentals' ||
+                                  category == 'Residential Apartments')
+                              ? kitchen
+                              : null,
+                          'furnished': furnished,
+                          'parking': parking,
+                          'utilities': utilities,
+                          'balcony': balcony,
+                          'amenities': amenitiesController.text.trim(),
+                          'size': sizeController.text.trim(),
+                          'floorLevel': floorLevelController.text.trim(),
+                          'visibility': visibilityController.text.trim(),
+                          'powerBackup': powerBackup,
+                          'anchorProximity': anchorProximity,
+                          'footTraffic': footTrafficController.text.trim(),
+                        }, SetOptions(merge: true));
                         Navigator.pop(context);
                       } catch (e) {
                         isLoading = false;
@@ -1150,6 +1201,124 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       }
                     }
                   },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _addTenantDialog(
+      BuildContext context, String propertyId, String propertyName) async {
+    final _formKey = GlobalKey<FormState>();
+    TextEditingController tenantNameController = TextEditingController();
+    TextEditingController tenantEmailController = TextEditingController();
+    TextEditingController tenantPhoneController = TextEditingController();
+    bool isLoading = false;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: m3Surface,
+              titleTextStyle: TextStyle(
+                  color: m3Primary, fontWeight: FontWeight.bold, fontSize: 20),
+              title: Text('Add Tenant to "$propertyName"'),
+              content: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: tenantNameController,
+                        decoration: InputDecoration(hintText: 'Tenant Name'),
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: tenantEmailController,
+                        decoration: InputDecoration(hintText: 'Tenant Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: tenantPhoneController,
+                        decoration: InputDecoration(hintText: 'Tenant Phone'),
+                        keyboardType: TextInputType.phone,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: Text('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: m3Primary, foregroundColor: m3OnPrimary),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Add Tenant'),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setStateDialog(() => isLoading = true);
+                            _showBusy(true);
+                            try {
+                              // Add tenant to Firestore (users collection, and property-tenants subcollection)
+                              final tenantDoc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .add({
+                                'name': tenantNameController.text.trim(),
+                                'email': tenantEmailController.text.trim(),
+                                'phone': tenantPhoneController.text.trim(),
+                                'role': 'Tenant',
+                                'properties': [
+                                  propertyId
+                                ], // List of property IDs
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+                              // Add reference in property document (tenants subcollection)
+                              await FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(propertyId)
+                                  .collection('tenants')
+                                  .doc(tenantDoc.id)
+                                  .set({
+                                'userId': tenantDoc.id,
+                                'name': tenantNameController.text.trim(),
+                                'email': tenantEmailController.text.trim(),
+                                'phone': tenantPhoneController.text.trim(),
+                                'addedAt': FieldValue.serverTimestamp(),
+                              });
+                              Navigator.pop(context);
+                            } catch (e) {
+                              setStateDialog(() => isLoading = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Failed to add tenant: $e')),
+                              );
+                            } finally {
+                              _showBusy(false);
+                            }
+                          }
+                        },
                 ),
               ],
             );

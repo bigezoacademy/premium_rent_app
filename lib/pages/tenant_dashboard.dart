@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../auth_service.dart';
 import '../main.dart';
 
 class TenantDashboard extends StatelessWidget {
   final VoidCallback? onLogout;
-  const TenantDashboard({Key? key, this.onLogout}) : super(key: key);
+  final String? userId;
+  final String? userEmail;
+  const TenantDashboard({Key? key, this.onLogout, this.userId, this.userEmail})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final uid = userId ?? currentUser?.uid;
+    final email = userEmail ?? currentUser?.email;
+    if (uid == null && email == null) {
+      return Scaffold(
+        body: Center(child: Text('No user found. Please log in again.')),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -33,23 +45,48 @@ class TenantDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('properties').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading properties'));
+          if (userSnapshot.hasError ||
+              !userSnapshot.hasData ||
+              !userSnapshot.data!.exists) {
+            return Center(child: Text('Error loading user data'));
           }
-          final properties = snapshot.data?.docs ?? [];
-          return ListView.builder(
-            itemCount: properties.length,
-            itemBuilder: (context, index) {
-              final doc = properties[index];
-              return ListTile(
-                title: Text(doc['name'] ?? 'Unnamed'),
-                subtitle: Text(doc['location'] ?? ''),
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+          final List<dynamic> assignedPropertyIds =
+              userData?['properties'] ?? [];
+          if (assignedPropertyIds.isEmpty) {
+            return Center(child: Text('No properties assigned to you yet.'));
+          }
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('properties')
+                .where(FieldPath.documentId, whereIn: assignedPropertyIds)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error loading properties'));
+              }
+              final properties = snapshot.data?.docs ?? [];
+              if (properties.isEmpty) {
+                return Center(child: Text('No assigned properties found.'));
+              }
+              return ListView.builder(
+                itemCount: properties.length,
+                itemBuilder: (context, index) {
+                  final doc = properties[index];
+                  return ListTile(
+                    title: Text(doc['name'] ?? 'Unnamed'),
+                    subtitle: Text(doc['location'] ?? ''),
+                  );
+                },
               );
             },
           );

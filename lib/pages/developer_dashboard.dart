@@ -3,9 +3,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../auth_service.dart';
 import '../main.dart';
 
-class DeveloperDashboard extends StatelessWidget {
+class DeveloperDashboard extends StatefulWidget {
   final VoidCallback? onLogout;
   const DeveloperDashboard({Key? key, this.onLogout}) : super(key: key);
+
+  @override
+  _DeveloperDashboardState createState() => _DeveloperDashboardState();
+}
+
+class _DeveloperDashboardState extends State<DeveloperDashboard> {
+  bool isLoading = false;
+  String? error;
+
+  // Property Manager fields
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +34,8 @@ class DeveloperDashboard extends StatelessWidget {
             tooltip: 'Logout',
             onPressed: () async {
               await AuthService().signOut();
-              if (onLogout != null) {
-                onLogout!();
+              if (widget.onLogout != null) {
+                widget.onLogout!();
               } else {
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -33,65 +47,116 @@ class DeveloperDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('properties').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading properties'));
-          }
-          final properties = snapshot.data?.docs ?? [];
-          return ListView.builder(
-            itemCount: properties.length,
-            itemBuilder: (context, index) {
-              final doc = properties[index];
-              return ListTile(
-                title: Text(doc['name'] ?? 'Unnamed'),
-                subtitle: Text(doc['location'] ?? ''),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _dashboardHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8AC611))),
-        SizedBox(height: 8),
-        Text(subtitle, style: TextStyle(fontSize: 16, color: Colors.black54)),
-      ],
-    );
-  }
-
-  Widget _dashboardCard(BuildContext context,
-      {required IconData icon,
-      required String title,
-      required Color color,
-      required VoidCallback onTap}) {
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color, size: 28),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add New Property Manager',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: phoneController,
+              decoration: InputDecoration(labelText: 'Phone'),
+            ),
+            TextField(
+              controller: passwordController,
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            SizedBox(height: 16),
+            if (isLoading) CircularProgressIndicator(),
+            if (error != null)
+              Text(error!, style: TextStyle(color: Colors.red)),
+            ElevatedButton(
+              onPressed: isLoading ? null : _addManager,
+              child: Text('Add Property Manager'),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Color(0xFF8AC611)),
+            ),
+            SizedBox(height: 32),
+            Text('All Property Managers',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Expanded(child: _buildManagersList()),
+          ],
         ),
-        title: Text(title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        trailing: Icon(Icons.arrow_forward_ios, color: color),
-        onTap: onTap,
       ),
     );
+  }
+
+  Future<void> _addManager() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+    try {
+      // Create manager in Firestore (let them set password via email invite in real app)
+      await FirebaseFirestore.instance.collection('users').add({
+        'name': nameController.text.trim(),
+        'email': emailController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'role': 'Property Manager',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      nameController.clear();
+      emailController.clear();
+      phoneController.clear();
+      passwordController.clear();
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Widget _buildManagersList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'Property Manager')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading managers'));
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(child: Text('No property managers found.'));
+        }
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            return ListTile(
+              title: Text(doc['name'] ?? ''),
+              subtitle: Text(doc['email'] ?? ''),
+              trailing: IconButton(
+                icon: Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _deleteManager(doc.id),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteManager(String docId) async {
+    await FirebaseFirestore.instance.collection('users').doc(docId).delete();
   }
 }

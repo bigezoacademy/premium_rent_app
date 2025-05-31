@@ -62,16 +62,22 @@ class AuthService {
       UserCredential result = await _auth.signInWithCredential(credential);
       User? user = result.user;
       if (user != null) {
-        // Optionally create user doc if not exists
-        final userDoc =
-            await _firestore.collection('users').doc(user.uid).get();
+        final isDeveloper = user.email == 'grealmkids@gmail.com';
+        final userRef = _firestore.collection('users').doc(user.uid);
+        final userDoc = await userRef.get();
         if (!userDoc.exists) {
-          await _firestore.collection('users').doc(user.uid).set({
+          await userRef.set({
             'email': user.email,
-            'role': 'Tenant', // Default or prompt later
+            'role': isDeveloper ? 'Developer' : 'Tenant',
             'displayName': user.displayName,
             'photoURL': user.photoURL,
           });
+        } else {
+          // Always enforce correct role for developer
+          final data = userDoc.data() ?? {};
+          if (isDeveloper && data['role'] != 'Developer') {
+            await userRef.update({'role': 'Developer'});
+          }
         }
       }
       return user;
@@ -85,4 +91,6 @@ class AuthService {
   }
 
   Stream<User?> get userChanges => _auth.userChanges();
+
+  String? currentUserId() => _auth.currentUser?.uid;
 }
