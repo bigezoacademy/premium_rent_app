@@ -128,8 +128,38 @@ class _LoginScreenState extends State<LoginScreen> {
       error = '';
     });
     try {
-      await AuthService().signInWithGoogle();
-      Navigator.pop(context);
+      final user = await AuthService().signInWithGoogle();
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final data = userDoc.data() ?? {};
+        final role = data['role'] ?? 'Tenant';
+        final name = data['name'] ?? '';
+        final email = data['email'] ?? user.email ?? '';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Detected role: ' + role),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Widget dashboard;
+        if (email == 'grealmkids@gmail.com') {
+          dashboard = DeveloperDashboard();
+        } else if (role == 'Property Manager') {
+          dashboard = ManagerDashboard(userName: name, userEmail: email);
+        } else if (role == 'Property Owner') {
+          dashboard = OwnerDashboard();
+        } else {
+          dashboard =
+              TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => dashboard),
+        );
+      }
     } catch (e) {
       setState(() {
         error = e.toString();

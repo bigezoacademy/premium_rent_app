@@ -84,20 +84,11 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
       final user = await AuthService().signInWithGoogle();
       if (user != null) {
         // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
-        if (user.email == 'grealmkids@gmail.com') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => DeveloperDashboard()),
-          );
-          return;
-        }
-
-        // Fetch user role and info from Firestore
-        final doc = await FirebaseFirestore.instance
+        final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-        final data = doc.data() ?? {};
+        final data = userDoc.data() ?? {};
         final role = data['role'] ?? 'Tenant';
         final name = data['name'] ?? '';
         final email = data['email'] ?? user.email ?? '';
@@ -109,7 +100,9 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
           ),
         );
         Widget dashboard;
-        if (role == 'Property Manager') {
+        if (email == 'grealmkids@gmail.com') {
+          dashboard = DeveloperDashboard();
+        } else if (role == 'Property Manager') {
           dashboard = ManagerDashboard(userName: name, userEmail: email);
         } else if (role == 'Property Owner') {
           dashboard = OwnerDashboard();

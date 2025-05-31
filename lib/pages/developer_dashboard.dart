@@ -19,7 +19,6 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -62,15 +61,12 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
             TextField(
               controller: emailController,
               decoration: InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
             ),
             TextField(
               controller: phoneController,
               decoration: InputDecoration(labelText: 'Phone'),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              keyboardType: TextInputType.phone,
             ),
             SizedBox(height: 16),
             if (isLoading) CircularProgressIndicator(),
@@ -97,8 +93,18 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
       isLoading = true;
       error = null;
     });
+    // Validate fields
+    if (nameController.text.trim().isEmpty ||
+        emailController.text.trim().isEmpty ||
+        phoneController.text.trim().isEmpty) {
+      setState(() {
+        isLoading = false;
+        error = 'All fields are required.';
+      });
+      return;
+    }
     try {
-      // Create manager in Firestore (let them set password via email invite in real app)
+      // Create manager in Firestore (let them sign in with Google)
       await FirebaseFirestore.instance.collection('users').add({
         'name': nameController.text.trim(),
         'email': emailController.text.trim(),
@@ -109,7 +115,6 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
       nameController.clear();
       emailController.clear();
       phoneController.clear();
-      passwordController.clear();
     } catch (e) {
       setState(() {
         error = e.toString();
