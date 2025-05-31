@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../auth_service.dart';
 import '../../main.dart';
 
@@ -228,11 +230,62 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                 String? categoryValue;
                 String? kitchenValue;
                 bool isLoading = false;
+                List<XFile> selectedImages = [];
+                List<String> uploadedPhotoUrls = [];
+                double uploadProgress = 0;
                 await showDialog(
                   context: context,
                   builder: (context) {
                     return StatefulBuilder(
                       builder: (context, setStateDialog) {
+                        Future<void> pickImages() async {
+                          final ImagePicker picker = ImagePicker();
+                          final List<XFile> images =
+                              await picker.pickMultiImage();
+                          if (images.length > 5) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(
+                                      'You can only select up to 5 images.')),
+                            );
+                            setStateDialog(() {
+                              selectedImages = images.sublist(0, 5);
+                            });
+                          } else {
+                            setStateDialog(() {
+                              selectedImages = images;
+                            });
+                          }
+                        }
+
+                        Future<List<String>> uploadImages(List<XFile> images,
+                            void Function(double) onProgress) async {
+                          List<String> urls = [];
+                          int uploaded = 0;
+                          for (var img in images) {
+                            final ref = FirebaseStorage.instance.ref(
+                                'property_photos/${DateTime.now().millisecondsSinceEpoch}_${img.name}');
+                            final uploadTask =
+                                ref.putData(await img.readAsBytes());
+                            uploadTask.snapshotEvents.listen((event) {
+                              if (event.totalBytes > 0) {
+                                double percent = (event.bytesTransferred /
+                                        event.totalBytes) *
+                                    100;
+                                onProgress((uploaded + percent / 100) /
+                                    images.length *
+                                    100);
+                              }
+                            });
+                            await uploadTask;
+                            final url = await ref.getDownloadURL();
+                            urls.add(url);
+                            uploaded++;
+                            onProgress(uploaded / images.length * 100);
+                          }
+                          return urls;
+                        }
+
                         return AlertDialog(
                           backgroundColor: m3Surface,
                           titleTextStyle: TextStyle(
@@ -356,6 +409,28 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                           ? 'Required'
                                           : null,
                                     ),
+                                  SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('Property Photos (max 5):'),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      ...selectedImages.map((img) =>
+                                          Image.network(img.path,
+                                              width: 60,
+                                              height: 60,
+                                              fit: BoxFit.cover)),
+                                      if (selectedImages.length < 5)
+                                        IconButton(
+                                          icon: Icon(Icons.add_a_photo,
+                                              color: m3Primary),
+                                          onPressed: pickImages,
+                                        ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
@@ -371,18 +446,48 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                 foregroundColor: m3OnPrimary,
                               ),
                               child: isLoading
-                                  ? SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white))
+                                  ? Column(
+                                      children: [
+                                        SizedBox(
+                                          width: 120,
+                                          child: LinearProgressIndicator(
+                                            value: uploadProgress / 100,
+                                            color: m3Primary,
+                                            backgroundColor: m3Outline,
+                                          ),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                            '${uploadProgress.toStringAsFixed(0)}% uploading...',
+                                            style: TextStyle(fontSize: 12)),
+                                      ],
+                                    )
                                   : Text('Add'),
                               onPressed: isLoading
                                   ? null
                                   : () async {
                                       if (_formKey.currentState!.validate()) {
-                                        setStateDialog(() => isLoading = true);
+                                        setStateDialog(() {
+                                          isLoading = true;
+                                          uploadProgress = 0;
+                                        });
                                         _showBusy(true);
+                                        uploadedPhotoUrls = [];
+                                        try {
+                                          uploadedPhotoUrls =
+                                              await uploadImages(selectedImages,
+                                                  (p) {
+                                            setStateDialog(
+                                                () => uploadProgress = p);
+                                          });
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text(
+                                                    'Some images failed to upload. Property will be saved without all images.')),
+                                          );
+                                        }
                                         try {
                                           await FirebaseFirestore.instance
                                               .collection('properties')
@@ -399,7 +504,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                                 .text
                                                 .trim(),
                                             'category': categoryValue,
-                                            // Only add 'kitchen' for residential categories
                                             if (categoryValue ==
                                                     'Residential Rentals' ||
                                                 categoryValue ==
@@ -407,18 +511,21 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                               'kitchen': kitchenValue,
                                             'createdAt':
                                                 FieldValue.serverTimestamp(),
-                                            // Add manager details
                                             'managerName':
                                                 widget.userName ?? '',
                                             'managerEmail':
                                                 widget.userEmail ?? '',
                                             'managerUid':
                                                 AuthService().currentUserId(),
+                                            'photos': uploadedPhotoUrls,
                                           });
                                           Navigator.pop(context);
                                         } catch (e) {
-                                          setStateDialog(
-                                              () => isLoading = false);
+                                          setStateDialog(() {
+                                            isLoading = false;
+                                            uploadProgress = 0;
+                                          });
+                                          _showBusy(false);
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             SnackBar(
@@ -461,11 +568,46 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     TextEditingController categoryController =
         TextEditingController(text: doc['category'] ?? '');
     bool isLoading = false;
+    List<String> currentPhotoUrls = List<String>.from(doc['photos'] ?? []);
+    List<XFile> selectedImages = [];
+    List<String> uploadedPhotoUrls = List<String>.from(currentPhotoUrls);
     await showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            Future<void> pickImages() async {
+              final ImagePicker picker = ImagePicker();
+              final List<XFile> images = await picker.pickMultiImage();
+              if (images.length + uploadedPhotoUrls.length > 5) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text('You can only select up to 5 images in total.')),
+                );
+                setStateDialog(() {
+                  selectedImages =
+                      images.sublist(0, 5 - uploadedPhotoUrls.length);
+                });
+              } else {
+                setStateDialog(() {
+                  selectedImages = images;
+                });
+              }
+            }
+
+            Future<List<String>> uploadImages(List<XFile> images) async {
+              List<String> urls = [];
+              for (var img in images) {
+                final ref = FirebaseStorage.instance.ref(
+                    'property_photos/${DateTime.now().millisecondsSinceEpoch}_${img.name}');
+                await ref.putData(await img.readAsBytes());
+                final url = await ref.getDownloadURL();
+                urls.add(url);
+              }
+              return urls;
+            }
+
             return AlertDialog(
               backgroundColor: m3Surface,
               titleTextStyle: TextStyle(
@@ -557,6 +699,43 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           validator: (v) =>
                               v == null || v.isEmpty ? 'Required' : null,
                         ),
+                      SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Property Photos (max 5):'),
+                      ),
+                      SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ...uploadedPhotoUrls.map((url) => Stack(
+                                alignment: Alignment.topRight,
+                                children: [
+                                  Image.network(url,
+                                      width: 60, height: 60, fit: BoxFit.cover),
+                                  IconButton(
+                                    icon: Icon(Icons.cancel,
+                                        color: Colors.red, size: 18),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    onPressed: () {
+                                      setStateDialog(() {
+                                        uploadedPhotoUrls.remove(url);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              )),
+                          ...selectedImages.map((img) => Image.network(img.path,
+                              width: 60, height: 60, fit: BoxFit.cover)),
+                          if (uploadedPhotoUrls.length + selectedImages.length <
+                              5)
+                            IconButton(
+                              icon: Icon(Icons.add_a_photo, color: m3Primary),
+                              onPressed: pickImages,
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -585,6 +764,12 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             setStateDialog(() => isLoading = true);
                             _showBusy(true);
                             try {
+                              final newPhotoUrls =
+                                  await uploadImages(selectedImages);
+                              final allPhotoUrls = [
+                                ...uploadedPhotoUrls,
+                                ...newPhotoUrls
+                              ];
                               await FirebaseFirestore.instance
                                   .collection('properties')
                                   .doc(doc.id)
@@ -601,6 +786,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                             'Residential Apartments')
                                     ? null
                                     : null,
+                                'photos': allPhotoUrls,
                               });
                               Navigator.pop(context);
                             } catch (e) {
@@ -700,6 +886,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                     (ownerPhone.isNotEmpty ? 'Phone: $ownerPhone\n' : '') +
                     'Oversee property, billing, and analytics.'),
             SizedBox(height: 24),
+            _tenantDatabaseSection(context, selectedPropertyId!),
+            SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -712,7 +900,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       if (selectedPropertyId != null &&
                           selectedPropertyName != null) {
                         _addTenantDialog(context, selectedPropertyId!,
-                            selectedPropertyName!);
+                            propertyName: selectedPropertyName!);
                       }
                     },
                   ),
@@ -1119,161 +1307,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : Text('Save'),
-                  onPressed: () async {
-                    if (isLoading) return;
-                    if (_formKey.currentState!.validate()) {
-                      try {
-                        isLoading = true;
-                        _showBusy(true);
-                        await FirebaseFirestore.instance
-                            .collection('properties')
-                            .doc(propertyId)
-                            .update({
-                          'rent': rentController.text.trim(),
-                          'deposit': depositController.text.trim(),
-                          'leaseDuration': leaseDurationController.text.trim(),
-                          'discountType': discountType,
-                          'discountValue': discountValueController.text.trim(),
-                          'serviceCharge': serviceChargeController.text.trim(),
-                          // Category-specific
-                          'bedrooms': bedroomsController.text.trim(),
-                          'bathrooms': bathroomsController.text.trim(),
-                          'kitchen': (category == 'Residential Rentals' ||
-                                  category == 'Residential Apartments')
-                              ? kitchen
-                              : null,
-                          'furnished': furnished,
-                          'parking': parking,
-                          'utilities': utilities,
-                          'balcony': balcony,
-                          'amenities': amenitiesController.text.trim(),
-                          'size': sizeController.text.trim(),
-                          'floorLevel': floorLevelController.text.trim(),
-                          'visibility': visibilityController.text.trim(),
-                          'powerBackup': powerBackup,
-                          'anchorProximity': anchorProximity,
-                          'footTraffic': footTrafficController.text.trim(),
-                        });
-                        // Also update the spaces subcollection for relevant properties
-                        await FirebaseFirestore.instance
-                            .collection('properties')
-                            .doc(propertyId)
-                            .collection('spaces')
-                            .doc(
-                                propertyId) // Assuming space doc ID is same as property ID
-                            .set({
-                          'propertyId': propertyId,
-                          'propertyName': selectedPropertyName,
-                          'rent': rentController.text.trim(),
-                          'deposit': depositController.text.trim(),
-                          'leaseDuration': leaseDurationController.text.trim(),
-                          'discountType': discountType,
-                          'discountValue': discountValueController.text.trim(),
-                          'serviceCharge': serviceChargeController.text.trim(),
-                          // Category-specific
-                          'bedrooms': bedroomsController.text.trim(),
-                          'bathrooms': bathroomsController.text.trim(),
-                          'kitchen': (category == 'Residential Rentals' ||
-                                  category == 'Residential Apartments')
-                              ? kitchen
-                              : null,
-                          'furnished': furnished,
-                          'parking': parking,
-                          'utilities': utilities,
-                          'balcony': balcony,
-                          'amenities': amenitiesController.text.trim(),
-                          'size': sizeController.text.trim(),
-                          'floorLevel': floorLevelController.text.trim(),
-                          'visibility': visibilityController.text.trim(),
-                          'powerBackup': powerBackup,
-                          'anchorProximity': anchorProximity,
-                          'footTraffic': footTrafficController.text.trim(),
-                        }, SetOptions(merge: true));
-                        Navigator.pop(context);
-                      } catch (e) {
-                        isLoading = false;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Failed to save rent details: $e')),
-                        );
-                      } finally {
-                        _showBusy(false);
-                      }
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _addTenantDialog(
-      BuildContext context, String propertyId, String propertyName) async {
-    final _formKey = GlobalKey<FormState>();
-    TextEditingController tenantNameController = TextEditingController();
-    TextEditingController tenantEmailController = TextEditingController();
-    TextEditingController tenantPhoneController = TextEditingController();
-    bool isLoading = false;
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: m3Surface,
-              titleTextStyle: TextStyle(
-                  color: m3Primary, fontWeight: FontWeight.bold, fontSize: 20),
-              title: Text('Add Tenant to "$propertyName"'),
-              content: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: tenantNameController,
-                        decoration: InputDecoration(hintText: 'Tenant Name'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: tenantEmailController,
-                        decoration: InputDecoration(hintText: 'Tenant Email'),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: tenantPhoneController,
-                        decoration: InputDecoration(hintText: 'Tenant Phone'),
-                        keyboardType: TextInputType.phone,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: m3Primary, foregroundColor: m3OnPrimary),
-                  child: isLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text('Add Tenant'),
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -1281,38 +1314,85 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             setStateDialog(() => isLoading = true);
                             _showBusy(true);
                             try {
-                              // Add tenant to Firestore (users collection, and property-tenants subcollection)
-                              final tenantDoc = await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .add({
-                                'name': tenantNameController.text.trim(),
-                                'email': tenantEmailController.text.trim(),
-                                'phone': tenantPhoneController.text.trim(),
-                                'role': 'Tenant',
-                                'properties': [
-                                  propertyId
-                                ], // List of property IDs
-                                'createdAt': FieldValue.serverTimestamp(),
-                              });
-                              // Add reference in property document (tenants subcollection)
                               await FirebaseFirestore.instance
                                   .collection('properties')
                                   .doc(propertyId)
-                                  .collection('tenants')
-                                  .doc(tenantDoc.id)
-                                  .set({
-                                'userId': tenantDoc.id,
-                                'name': tenantNameController.text.trim(),
-                                'email': tenantEmailController.text.trim(),
-                                'phone': tenantPhoneController.text.trim(),
-                                'addedAt': FieldValue.serverTimestamp(),
+                                  .update({
+                                'rent': rentController.text.trim(),
+                                'deposit': depositController.text.trim(),
+                                'leaseDuration':
+                                    leaseDurationController.text.trim(),
+                                'discountType': discountType,
+                                'discountValue':
+                                    discountValueController.text.trim(),
+                                'serviceCharge':
+                                    serviceChargeController.text.trim(),
+                                // Category-specific
+                                'bedrooms': bedroomsController.text.trim(),
+                                'bathrooms': bathroomsController.text.trim(),
+                                'kitchen': (category == 'Residential Rentals' ||
+                                        category == 'Residential Apartments')
+                                    ? kitchen
+                                    : null,
+                                'furnished': furnished,
+                                'parking': parking,
+                                'utilities': utilities,
+                                'balcony': balcony,
+                                'amenities': amenitiesController.text.trim(),
+                                'size': sizeController.text.trim(),
+                                'floorLevel': floorLevelController.text.trim(),
+                                'visibility': visibilityController.text.trim(),
+                                'powerBackup': powerBackup,
+                                'anchorProximity': anchorProximity,
+                                'footTraffic':
+                                    footTrafficController.text.trim(),
                               });
+                              // Also update the spaces subcollection for relevant properties
+                              await FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(propertyId)
+                                  .collection('spaces')
+                                  .doc(
+                                      propertyId) // Assuming space doc ID is same as property ID
+                                  .set({
+                                'propertyId': propertyId,
+                                'propertyName': selectedPropertyName,
+                                'rent': rentController.text.trim(),
+                                'deposit': depositController.text.trim(),
+                                'leaseDuration':
+                                    leaseDurationController.text.trim(),
+                                'discountType': discountType,
+                                'discountValue':
+                                    discountValueController.text.trim(),
+                                'serviceCharge':
+                                    serviceChargeController.text.trim(),
+                                // Category-specific
+                                'bedrooms': bedroomsController.text.trim(),
+                                'bathrooms': bathroomsController.text.trim(),
+                                'kitchen': (category == 'Residential Rentals' ||
+                                        category == 'Residential Apartments')
+                                    ? kitchen
+                                    : null,
+                                'furnished': furnished,
+                                'parking': parking,
+                                'utilities': utilities,
+                                'balcony': balcony,
+                                'amenities': amenitiesController.text.trim(),
+                                'size': sizeController.text.trim(),
+                                'floorLevel': floorLevelController.text.trim(),
+                                'visibility': visibilityController.text.trim(),
+                                'powerBackup': powerBackup,
+                                'anchorProximity': anchorProximity,
+                                'footTraffic':
+                                    footTrafficController.text.trim(),
+                              }, SetOptions(merge: true));
                               Navigator.pop(context);
                             } catch (e) {
-                              setStateDialog(() => isLoading = false);
+                              isLoading = false;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                    content: Text('Failed to add tenant: $e')),
+                                    content: Text(
+                                        'Failed to save rent details: $e')),
                               );
                             } finally {
                               _showBusy(false);
@@ -1323,6 +1403,225 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               ],
             );
           },
+        );
+      },
+    );
+  }
+
+  Future<void> _addTenantDialog(BuildContext context, String propertyId,
+      {String propertyName = '',
+      Map<String, dynamic>? tenantDoc,
+      String? tenantId}) async {
+    final _formKey = GlobalKey<FormState>();
+    TextEditingController nameController =
+        TextEditingController(text: tenantDoc?['name'] ?? '');
+    TextEditingController phoneController =
+        TextEditingController(text: tenantDoc?['phone'] ?? '');
+    TextEditingController emailController =
+        TextEditingController(text: tenantDoc?['email'] ?? '');
+    TextEditingController ageController =
+        TextEditingController(text: tenantDoc?['age']?.toString() ?? '');
+    String? gender = tenantDoc?['gender'] ?? null;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(tenantDoc == null ? 'Add Tenant' : 'Edit Tenant'),
+          content: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(hintText: 'Name'),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
+                  ),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: gender,
+                    decoration: InputDecoration(hintText: 'Gender'),
+                    items: [
+                      DropdownMenuItem(value: 'Male', child: Text('Male')),
+                      DropdownMenuItem(value: 'Female', child: Text('Female')),
+                      DropdownMenuItem(
+                          value: 'Business/Company',
+                          child: Text('Business/Company')),
+                    ],
+                    onChanged: (val) => gender = val,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
+                  ),
+                  SizedBox(height: 8),
+                  TextFormField(
+                    controller: ageController,
+                    decoration: InputDecoration(hintText: 'Age (optional)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  SizedBox(height: 8),
+                  TextFormField(
+                    controller: phoneController,
+                    decoration: InputDecoration(hintText: 'Phone'),
+                    keyboardType: TextInputType.phone,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
+                  ),
+                  SizedBox(height: 8),
+                  TextFormField(
+                    controller: emailController,
+                    decoration: InputDecoration(hintText: 'Email'),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              child: Text(tenantDoc == null ? 'Add' : 'Save'),
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final data = {
+                    'name': nameController.text.trim(),
+                    'gender': gender,
+                    'age': ageController.text.trim().isEmpty
+                        ? null
+                        : int.tryParse(ageController.text.trim()),
+                    'phone': phoneController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'createdAt': FieldValue.serverTimestamp(),
+                  };
+                  final ref = FirebaseFirestore.instance
+                      .collection('properties')
+                      .doc(propertyId)
+                      .collection('tenants');
+                  if (tenantDoc == null) {
+                    await ref.add(data);
+                  } else {
+                    await ref.doc(tenantId!).update(data);
+                  }
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _tenantDatabaseSection(BuildContext context, String propertyId) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('properties')
+          .doc(propertyId)
+          .collection('tenants')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading tenants'));
+        }
+        final tenants = snapshot.data?.docs ?? [];
+        int total = tenants.length;
+        int male = tenants.where((t) => t['gender'] == 'Male').length;
+        int female = tenants.where((t) => t['gender'] == 'Female').length;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tenant Database',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: m3Primary)),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Text('Total: $total',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(width: 16),
+                Text('Male: $male', style: TextStyle(color: Colors.blue)),
+                SizedBox(width: 16),
+                Text('Female: $female', style: TextStyle(color: Colors.pink)),
+              ],
+            ),
+            SizedBox(height: 12),
+            DataTable(
+              columns: [
+                DataColumn(label: Text('#')),
+                DataColumn(label: Text('Name')),
+                DataColumn(label: Text('Gender')),
+                DataColumn(label: Text('Age')),
+                DataColumn(label: Text('Phone')),
+                DataColumn(label: Text('Actions')),
+              ],
+              rows: List.generate(tenants.length, (i) {
+                final t = tenants[i];
+                return DataRow(cells: [
+                  DataCell(Text('${i + 1}')),
+                  DataCell(Text(t['name'] ?? '')),
+                  DataCell(Text(t['gender'] ?? '')),
+                  DataCell(Text(t['age']?.toString() ?? '')),
+                  DataCell(Text(t['phone'] ?? '')),
+                  DataCell(Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.sms, color: Colors.green),
+                        tooltip: 'SMS',
+                        onPressed: () {
+                          // TODO: Implement SMS
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.email, color: Colors.blue),
+                        tooltip: 'Email',
+                        onPressed: () {
+                          // TODO: Implement Email
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.orange),
+                        tooltip: 'Edit',
+                        onPressed: () {
+                          _addTenantDialog(context, propertyId,
+                              propertyName: '',
+                              tenantDoc: t.data() as Map<String, dynamic>,
+                              tenantId: t.id);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.call, color: Colors.teal),
+                        tooltip: 'Call',
+                        onPressed: () {
+                          // TODO: Implement Call
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        tooltip: 'Delete',
+                        onPressed: () async {
+                          await FirebaseFirestore.instance
+                              .collection('properties')
+                              .doc(propertyId)
+                              .collection('tenants')
+                              .doc(t.id)
+                              .delete();
+                        },
+                      ),
+                    ],
+                  )),
+                ]);
+              }),
+            ),
+          ],
         );
       },
     );

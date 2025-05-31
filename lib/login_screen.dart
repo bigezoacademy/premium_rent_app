@@ -6,6 +6,7 @@ import 'pages/manager_dashboard.dart'; // Import the ManagerDashboard
 import 'pages/owner_dashboard.dart'; // Import the OwnerDashboard
 import 'pages/tenant_property_select.dart'; // Import the TenantPropertySelectScreen
 import 'pages/developer_dashboard.dart'; // Import the DeveloperDashboard
+import 'pages/public_property_listing.dart'; // Import the PublicPropertyListingPage
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -128,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
       error = '';
     });
     try {
-      final user = await AuthService().signInWithGoogle();
+      final user = await AuthService().signInWithGoogle(checkOnly: true);
       if (user != null) {
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -158,6 +159,68 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => dashboard),
+        );
+      } else {
+        // User does not exist, show dialog with options
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Account Not Found'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('To create a new property manager account, contact:'),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.message, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('+256773913902',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.email, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('propertyapp@grealm.org',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                SizedBox(height: 24),
+                Divider(),
+                SizedBox(height: 8),
+                Text('Or start renting a property:'),
+                SizedBox(height: 8),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.home),
+                  label: Text('View Properties'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => PublicPropertyListingPage()),
+                    );
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                child: Text('Close'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {

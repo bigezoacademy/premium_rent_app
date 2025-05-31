@@ -46,7 +46,7 @@ class AuthService {
     }
   }
 
-  Future<User?> signInWithGoogle() async {
+  Future<User?> signInWithGoogle({bool checkOnly = false}) async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
@@ -70,35 +70,35 @@ class AuthService {
             .limit(1)
             .get();
         if (query.docs.isNotEmpty) {
-          // User exists in Firestore by email, update UID doc if needed
+          // User exists in Firestore by email, update UID doc with all fields and remove duplicates
           final doc = query.docs.first;
           final data = doc.data();
-          // If the Firestore doc is not at the current UID, copy to UID doc if needed
           final userRef = _firestore.collection('users').doc(user.uid);
-          final userDoc = await userRef.get();
-          if (!userDoc.exists) {
-            await userRef.set(data);
-          } else {
-            // Optionally, update fields if needed (e.g., displayName, photoURL)
-            await userRef.update({
-              'displayName': user.displayName,
-              'photoURL': user.photoURL,
-            });
-          }
-          // Always enforce correct role for developer
-          if (isDeveloper && data['role'] != 'Developer') {
-            await userRef.update({'role': 'Developer'});
-          }
-        } else {
-          // No user with this email exists in Firestore, create new user
-          // Only allow Developer or Property Manager to be created here
-          String role = isDeveloper ? 'Developer' : 'Property Manager';
-          await _firestore.collection('users').doc(user.uid).set({
-            'email': user.email,
-            'role': role,
+          // Merge all fields, including displayName, photoURL, createdAt, etc.
+          final mergedData = {
+            ...data,
             'displayName': user.displayName,
             'photoURL': user.photoURL,
-          });
+            'email': user.email,
+            'role': data['role'] ?? 'Property Manager',
+            'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
+          };
+          await userRef.set(mergedData, SetOptions(merge: true));
+          // Remove any other docs with the same email but different UID
+          for (final d in query.docs) {
+            if (d.id != user.uid) {
+              await _firestore.collection('users').doc(d.id).delete();
+            }
+          }
+          if (isDeveloper && mergedData['role'] != 'Developer') {
+            await userRef.update({'role': 'Developer'});
+          }
+          return user;
+        } else {
+          // User does not exist in Firestore, do NOT create a new user
+          // Return null so UI can show dialog with contact info and public property listing option
+          await _auth.signOut();
+          return null;
         }
       }
       return user;

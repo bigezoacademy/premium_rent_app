@@ -154,13 +154,21 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Welcome to Premium Rent App')),
+      appBar: null,
       body: Center(
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(height: 32),
+              // App icon above Google button
+              Image.asset(
+                'assets/icon.png',
+                width: 90,
+                height: 90,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: 18),
               if (errorMessage != null) ...[
                 Container(
                   margin: EdgeInsets.only(bottom: 16),
