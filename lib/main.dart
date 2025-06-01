@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'pages/manager_dashboard.dart';
-import 'pages/tenant_property_select.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'pages/owner_dashboard.dart';
 import 'pages/developer_dashboard.dart';
 import 'firebase_options.dart';
+import 'pages/tenant_entry.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,59 +38,54 @@ void main() async {
 }
 
 Future<void> ensureCollectionsExist() async {
-  final firestore = FirebaseFirestore.instance;
-  // Create a dummy doc in each collection if it doesn't exist, then delete it (to ensure collection exists)
-  final collections = ['properties', 'billing', 'credentials', 'tenants'];
-  for (final col in collections) {
-    final ref = firestore.collection(col).doc('__init__');
-    final doc = await ref.get();
-    if (!doc.exists) {
-      await ref.set({'init': true});
-      await ref.delete();
-    }
-  }
+  // No-op: Firestore collections are created automatically when you add a document.
 }
 
 Future<void> ensureCollectionsAndLinksForUser(
     String userId, String userEmail, String userName, String role) async {
   final firestore = FirebaseFirestore.instance;
-  // Ensure collections exist
-  final collections = ['properties', 'billing', 'credentials', 'tenants'];
-  for (final col in collections) {
-    final ref = firestore.collection(col).doc('__init__');
-    final doc = await ref.get();
-    if (!doc.exists) {
-      await ref.set({'init': true});
-      await ref.delete();
-    }
-  }
+  // Removed collection creation logic for '__init__'.
   // Auto-link user to billing and credentials collections only (no starter property/tenant)
   if (role == 'Property Manager' || role == 'Tenant') {
-    final billingQuery = await firestore
-        .collection('billing')
-        .where('userEmail', isEqualTo: userEmail)
-        .limit(1)
-        .get();
-    if (billingQuery.docs.isEmpty) {
-      await firestore.collection('billing').add({
-        'userEmail': userEmail,
-        'userUid': userId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'role': role,
-      });
+    try {
+      final billingQuery = await firestore
+          .collection('billing')
+          .where('userEmail', isEqualTo: userEmail)
+          .limit(1)
+          .get();
+      if (billingQuery.docs.isEmpty) {
+        await firestore.collection('billing').add({
+          'userEmail': userEmail,
+          'userUid': userId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'role': role,
+        });
+      }
+    } catch (e, st) {
+      print('[Firestore Init] Error adding billing doc for user: '
+          '\u001b[31m$userEmail\u001b[0m');
+      print(e);
+      print(st);
     }
-    final credentialsQuery = await firestore
-        .collection('credentials')
-        .where('userEmail', isEqualTo: userEmail)
-        .limit(1)
-        .get();
-    if (credentialsQuery.docs.isEmpty) {
-      await firestore.collection('credentials').add({
-        'userEmail': userEmail,
-        'userUid': userId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'role': role,
-      });
+    try {
+      final credentialsQuery = await firestore
+          .collection('credentials')
+          .where('userEmail', isEqualTo: userEmail)
+          .limit(1)
+          .get();
+      if (credentialsQuery.docs.isEmpty) {
+        await firestore.collection('credentials').add({
+          'userEmail': userEmail,
+          'userUid': userId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'role': role,
+        });
+      }
+    } catch (e, st) {
+      print('[Firestore Init] Error adding credentials doc for user: '
+          '\u001b[31m$userEmail\u001b[0m');
+      print(e);
+      print(st);
     }
   }
 }
@@ -154,10 +149,21 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
             .collection('users')
             .doc(user.uid)
             .get();
+        if (!userDoc.exists) {
+          // New user: show landing page with options
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NewUserLandingPage(),
+            ),
+          );
+          return;
+        }
         final data = userDoc.data() ?? {};
         final role = data['role'] ?? 'Tenant';
         final name = data['name'] ?? '';
         final email = data['email'] ?? user.email ?? '';
+        final phone = data['phone'] ?? '';
         // Auto-link user to collections (no starter property/tenant)
         await ensureCollectionsAndLinksForUser(user.uid, email, name, role);
         // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
@@ -178,12 +184,23 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
             context,
             MaterialPageRoute(builder: (context) => OwnerDashboard()),
           );
-        } else {
+        } else if (role == 'Tenant') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-                builder: (context) => TenantPropertySelectScreen(
-                    userId: user.uid, userEmail: email)),
+                builder: (context) => TenantPropertySelector(
+                      userEmail: email,
+                      userPhone: phone,
+                      displayName: name,
+                    )),
+          );
+        } else {
+          // Fallback: treat as new user
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NewUserLandingPage(),
+            ),
           );
         }
       } else {

@@ -78,7 +78,48 @@ class TenantDashboard extends StatelessWidget {
                 return Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                return Center(child: Text('Error loading properties'));
+                // Print the error to the browser console for debugging
+                print('[TenantDashboard] Error loading properties:');
+                print(snapshot.error);
+                if (snapshot.stackTrace != null) print(snapshot.stackTrace);
+                // Show the UI with disabled dropdown and enabled Add Property button
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Manage a Property',
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8AC611))),
+                    SizedBox(height: 24),
+                    DropdownButton<String>(
+                      value: null,
+                      hint: Text('Choose Property'),
+                      items: [],
+                      onChanged: null, // Disabled
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFC65611),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text('Add New Property'),
+                      onPressed: () {
+                        // TODO: Implement add property dialog or navigation
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    Center(
+                        child: Text('Error loading properties',
+                            style: TextStyle(color: Colors.red))),
+                  ],
+                );
               }
               final properties = snapshot.data?.docs ?? [];
               if (properties.isEmpty) {
