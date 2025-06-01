@@ -78,6 +78,14 @@ class _LoginScreenState extends State<LoginScreen> {
               .collection('users')
               .doc(user.uid)
               .get();
+          if (!doc.exists) {
+            // User does not exist, show dialog with options
+            _showNewUserOptions(context);
+            setState(() {
+              isLoading = false;
+            });
+            return;
+          }
           final data = doc.data() ?? {};
           final role = data['role'] ?? 'Tenant';
           final name = data['name'] ?? '';
@@ -89,22 +97,23 @@ class _LoginScreenState extends State<LoginScreen> {
               duration: Duration(seconds: 2),
             ),
           );
-          if (email == 'grealmkids@gmail.com') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => DeveloperDashboard()),
-            );
-            return;
-          }
           Widget dashboard;
-          if (role == 'Property Manager') {
+          if (email == 'grealmkids@gmail.com') {
+            dashboard = DeveloperDashboard();
+          } else if (role == 'Property Manager') {
             dashboard = ManagerDashboard(userName: name, userEmail: email);
           } else if (role == 'Property Owner') {
             dashboard = OwnerDashboard();
-          } else {
-            // Route tenant to property selection screen
+          } else if (role == 'Tenant') {
             dashboard =
                 TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+          } else {
+            // Fallback: treat as new user
+            _showNewUserOptions(context);
+            setState(() {
+              isLoading = false;
+            });
+            return;
           }
           Navigator.pushReplacement(
             context,
@@ -112,66 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           // User does not exist, show dialog with options
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Account Not Found'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('To create a new property manager account, contact:'),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.message, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('+256773913902',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.email, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('propertyapp@grealm.org',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  SizedBox(height: 24),
-                  Divider(),
-                  SizedBox(height: 8),
-                  Text('Or start renting a property:'),
-                  SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.home),
-                    label: Text('View Properties'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => PublicPropertyListingPage()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Close'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          );
+          _showNewUserOptions(context);
         }
       } catch (e) {
         setState(() {
@@ -197,6 +147,13 @@ class _LoginScreenState extends State<LoginScreen> {
             .collection('users')
             .doc(user.uid)
             .get();
+        if (!userDoc.exists) {
+          _showNewUserOptions(context);
+          setState(() {
+            isLoading = false;
+          });
+          return;
+        }
         final data = userDoc.data() ?? {};
         final role = data['role'] ?? 'Tenant';
         final name = data['name'] ?? '';
@@ -214,76 +171,22 @@ class _LoginScreenState extends State<LoginScreen> {
           dashboard = ManagerDashboard(userName: name, userEmail: email);
         } else if (role == 'Property Owner') {
           dashboard = OwnerDashboard();
-        } else {
+        } else if (role == 'Tenant') {
           dashboard =
               TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+        } else {
+          _showNewUserOptions(context);
+          setState(() {
+            isLoading = false;
+          });
+          return;
         }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => dashboard),
         );
       } else {
-        // User does not exist, show dialog with options
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Account Not Found'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('To create a new property manager account, contact:'),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.message, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('+256773913902',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.email, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('propertyapp@grealm.org',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                SizedBox(height: 24),
-                Divider(),
-                SizedBox(height: 8),
-                Text('Or start renting a property:'),
-                SizedBox(height: 8),
-                ElevatedButton.icon(
-                  icon: Icon(Icons.home),
-                  label: Text('View Properties'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PublicPropertyListingPage()),
-                    );
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                child: Text('Close'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        );
+        _showNewUserOptions(context);
       }
     } catch (e) {
       setState(() {
@@ -294,5 +197,68 @@ class _LoginScreenState extends State<LoginScreen> {
         isLoading = false;
       });
     }
+  }
+
+  void _showNewUserOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Account Not Found'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('To create a new property manager account, contact:'),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.message, color: Colors.green),
+                SizedBox(width: 8),
+                Text('+256773913902',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.email, color: Colors.blue),
+                SizedBox(width: 8),
+                Text('propertyapp@grealm.org',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            SizedBox(height: 24),
+            Divider(),
+            SizedBox(height: 8),
+            Text('Or start renting a property:'),
+            SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: Icon(Icons.home),
+              label: Text('View Properties'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => PublicPropertyListingPage()),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            child: Text('Close'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
   }
 }

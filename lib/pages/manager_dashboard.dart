@@ -189,10 +189,10 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                   ),
                   elevation: 0,
                 ),
-                child: Text('Add New Property'),
                 onPressed: () {
                   // TODO: Implement add property dialog or navigation
                 },
+                child: Text('Add New Property'),
               ),
               SizedBox(height: 16),
               Center(
@@ -518,21 +518,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           ),
                           actions: [
                             TextButton(
-                              child: Text('Cancel'),
                               onPressed: () => Navigator.pop(context),
+                              child: Text('Cancel'),
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: m3Primary,
                                 foregroundColor: m3OnPrimary,
                               ),
-                              child: isLoading
-                                  ? SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white))
-                                  : Text('Add'),
                               onPressed: isLoading
                                   ? null
                                   : () async {
@@ -585,6 +578,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                         }
                                       }
                                     },
+                              child: Text('Add'),
                             ),
                           ],
                         );
@@ -790,21 +784,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancel'),
                   onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: m3Primary,
                     foregroundColor: m3OnPrimary,
                   ),
-                  child: isLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text('Save'),
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -848,6 +835,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             }
                           }
                         },
+                  child: Text('Save'),
                 ),
               ],
             );
@@ -866,14 +854,12 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         content: Text('Are you sure you want to delete "$name"?'),
         actions: [
           TextButton(
-            child: Text('Cancel'),
-            onPressed: () => Navigator.pop(context, false),
-          ),
+              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context, false)),
           ElevatedButton(
-            child: Text('Delete'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-          ),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Delete')),
         ],
       ),
     );
@@ -910,9 +896,18 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
           margin: EdgeInsets.only(bottom: 16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: _dashboardHeader(
-              propertyName,
-              subtitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(propertyName,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color: Colors.white)),
+                SizedBox(height: 8),
+                Text(subtitle,
+                    style: TextStyle(fontSize: 16, color: Colors.white)),
+              ],
             ),
           ),
         ),
@@ -942,6 +937,21 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               },
             ),
             Spacer(),
+            ElevatedButton.icon(
+              icon: Icon(Icons.person_add, color: Colors.white),
+              label: Text('Add Tenant'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: m3Primary,
+                foregroundColor: m3OnPrimary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+              onPressed: () {
+                _addTenantDialog(context, selectedPropertyId!,
+                    propertyName: selectedPropertyName ?? '');
+              },
+            ),
           ],
         ),
         SizedBox(height: 24),
@@ -1251,89 +1261,65 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           keyboardType: TextInputType.number,
                         ),
                       SizedBox(height: 8),
-                      TextFormField(
-                        controller: serviceChargeController,
-                        decoration:
-                            InputDecoration(labelText: 'Service Charge'),
-                        keyboardType: TextInputType.number,
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(labelText: 'Has Kitchen'),
+                        value: kitchen,
+                        items: [
+                          DropdownMenuItem(value: 'Yes', child: Text('Yes')),
+                          DropdownMenuItem(value: 'No', child: Text('No')),
+                        ],
+                        onChanged: (val) => setState(() => kitchen = val),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       SizedBox(height: 8),
-                      if (category == 'Residential Rentals' ||
-                          category == 'Residential Apartments') ...[
-                        TextFormField(
-                          controller: bedroomsController,
-                          decoration:
-                              InputDecoration(labelText: 'Number of Bedrooms'),
-                          keyboardType: TextInputType.number,
-                        ),
-                        SizedBox(height: 8),
-                        TextFormField(
-                          controller: bathroomsController,
-                          decoration:
-                              InputDecoration(labelText: 'Number of Bathrooms'),
-                          keyboardType: TextInputType.number,
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          decoration: InputDecoration(labelText: 'Has Kitchen'),
-                          value: kitchen,
-                          items: [
-                            DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No')),
-                          ],
-                          onChanged: (val) => setState(() => kitchen = val),
-                          validator: (v) =>
-                              v == null || v.isEmpty ? 'Required' : null,
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          decoration: InputDecoration(labelText: 'Furnished'),
-                          value: furnished,
-                          items: [
-                            DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
-                          ],
-                          onChanged: (val) => setState(() => furnished = val),
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          decoration:
-                              InputDecoration(labelText: 'Parking Included'),
-                          value: parking,
-                          items: [
-                            DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
-                          ],
-                          onChanged: (val) => setState(() => parking = val),
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          decoration:
-                              InputDecoration(labelText: 'Utilities Included'),
-                          value: utilities,
-                          items: [
-                            DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
-                          ],
-                          onChanged: (val) => setState(() => utilities = val),
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          decoration: InputDecoration(labelText: 'Balcony'),
-                          value: balcony,
-                          items: [
-                            DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
-                          ],
-                          onChanged: (val) => setState(() => balcony = val),
-                        ),
-                        SizedBox(height: 8),
-                        TextFormField(
-                          controller: amenitiesController,
-                          decoration: InputDecoration(
-                              labelText: 'Amenities (comma separated)'),
-                        ),
-                      ],
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(labelText: 'Furnished'),
+                        value: furnished,
+                        items: [
+                          DropdownMenuItem(value: 'Yes', child: Text('Yes')),
+                          DropdownMenuItem(value: 'No', child: Text('No'))
+                        ],
+                        onChanged: (val) => setState(() => furnished = val),
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        decoration:
+                            InputDecoration(labelText: 'Parking Included'),
+                        value: parking,
+                        items: [
+                          DropdownMenuItem(value: 'Yes', child: Text('Yes')),
+                          DropdownMenuItem(value: 'No', child: Text('No'))
+                        ],
+                        onChanged: (val) => setState(() => parking = val),
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        decoration:
+                            InputDecoration(labelText: 'Utilities Included'),
+                        value: utilities,
+                        items: [
+                          DropdownMenuItem(value: 'Yes', child: Text('Yes')),
+                          DropdownMenuItem(value: 'No', child: Text('No'))
+                        ],
+                        onChanged: (val) => setState(() => utilities = val),
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(labelText: 'Balcony'),
+                        value: balcony,
+                        items: [
+                          DropdownMenuItem(value: 'Yes', child: Text('Yes')),
+                          DropdownMenuItem(value: 'No', child: Text('No'))
+                        ],
+                        onChanged: (val) => setState(() => balcony = val),
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: amenitiesController,
+                        decoration: InputDecoration(
+                            labelText: 'Amenities (comma separated)'),
+                      ),
                       if (category == 'Shop Rentals') ...[
                         TextFormField(
                           controller: sizeController,
@@ -1358,7 +1344,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           value: powerBackup,
                           items: [
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
+                            DropdownMenuItem(value: 'No', child: Text('No')),
                           ],
                           onChanged: (val) => setState(() => powerBackup = val),
                         ),
@@ -1382,7 +1368,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           value: anchorProximity,
                           items: [
                             DropdownMenuItem(value: 'Yes', child: Text('Yes')),
-                            DropdownMenuItem(value: 'No', child: Text('No'))
+                            DropdownMenuItem(value: 'No', child: Text('No')),
                           ],
                           onChanged: (val) =>
                               setState(() => anchorProximity = val),
@@ -1401,21 +1387,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancel'),
                   onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: m3Primary,
                     foregroundColor: m3OnPrimary,
                   ),
-                  child: isLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text('Save'),
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -1508,6 +1487,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             }
                           }
                         },
+                  child: Text('Save'),
                 ),
               ],
             );
@@ -1598,17 +1578,14 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancel'),
                   onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
-                  child: isLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text(tenantId == null ? 'Add' : 'Save'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: m3Primary,
+                    foregroundColor: m3OnPrimary,
+                  ),
                   onPressed: isLoading
                       ? null
                       : () async {
@@ -1667,6 +1644,13 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             }
                           }
                         },
+                  child: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text(tenantId == null ? 'Add' : 'Save'),
                 ),
               ],
             );
@@ -1770,6 +1754,7 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                     _showAddOrEditTenantDialog();
                   },
                 ),
+                Spacer(),
               ],
             ),
             SizedBox(height: 12),
@@ -1861,11 +1846,11 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                                           onPressed: () =>
                                               Navigator.pop(context, false)),
                                       ElevatedButton(
-                                          child: Text('Delete'),
                                           style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.red),
                                           onPressed: () =>
-                                              Navigator.pop(context, true)),
+                                              Navigator.pop(context, true),
+                                          child: Text('Delete')),
                                     ],
                                   ),
                                 );
