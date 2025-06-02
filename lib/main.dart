@@ -7,6 +7,7 @@ import 'pages/manager_dashboard.dart';
 import 'pages/owner_dashboard.dart';
 import 'pages/developer_dashboard.dart';
 import 'firebase_options.dart';
+import 'pages/tenant_dashboard.dart';
 import 'pages/tenant_entry.dart';
 
 void main() async {
@@ -160,10 +161,10 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
           return;
         }
         final data = userDoc.data() ?? {};
-        final role = data['role'] ?? 'Tenant';
+        final role = (data['role'] ?? 'Tenant').toString();
+        print('[DEBUG] Logged in user role: ' + role.toString());
         final name = data['name'] ?? '';
         final email = data['email'] ?? user.email ?? '';
-        final phone = data['phone'] ?? '';
         // Auto-link user to collections (no starter property/tenant)
         await ensureCollectionsAndLinksForUser(user.uid, email, name, role);
         // Check if user.email == 'grealmkids@gmail.com', if so, route to DeveloperDashboard
@@ -172,27 +173,23 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
             context,
             MaterialPageRoute(builder: (context) => DeveloperDashboard()),
           );
-        } else if (role == 'Property Manager') {
+        } else if (role.toLowerCase() == 'property manager') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
                 builder: (context) =>
                     ManagerDashboard(userName: name, userEmail: email)),
           );
-        } else if (role == 'Property Owner') {
+        } else if (role.toLowerCase() == 'property owner') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => OwnerDashboard()),
           );
-        } else if (role == 'Tenant') {
+        } else if (role.toLowerCase() == 'tenant') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-                builder: (context) => TenantPropertySelector(
-                      userEmail: email,
-                      userPhone: phone,
-                      displayName: name,
-                    )),
+                builder: (context) => TenantDashboard(userEmail: email)),
           );
         } else {
           // Fallback: treat as new user
@@ -252,9 +249,9 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
               SizedBox(height: 32),
               // App icon above Google button
               Image.asset(
-                'assets/icon.png',
-                width: 90,
-                height: 90,
+                'assets/bigezo.png',
+                width: 220, // Increased width
+                height: 220, // Increased height
                 fit: BoxFit.contain,
               ),
               SizedBox(height: 18),

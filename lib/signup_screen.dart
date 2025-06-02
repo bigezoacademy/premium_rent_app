@@ -55,7 +55,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 onPressed: isLoading ? null : _signUp,
                 child: Text('Sign Up'),
               ),
-              SizedBox(height: 12),
+              SizedBox(height: 30),
               GoogleSignInButton(
                 isLoading: isLoading,
                 onPressed: isLoading ? null : _signInWithGoogle,

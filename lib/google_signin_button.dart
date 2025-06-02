@@ -11,14 +11,19 @@ class GoogleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
+      height: 120, // Keep the large height
       child: ElevatedButton.icon(
-        icon: Image.asset('assets/google.png', height: 24),
-        label: Text('Sign in with Google'),
+        icon: Image.asset('assets/google.png', height: 64),
+        label: Text(
+          'Sign in with Google',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 28),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           side: BorderSide(color: Colors.grey.shade300),
-          textStyle: TextStyle(fontWeight: FontWeight.bold),
+          textStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 28),
+          padding: EdgeInsets.zero, // Remove all padding
         ),
         onPressed: isLoading ? null : onPressed,
       ),

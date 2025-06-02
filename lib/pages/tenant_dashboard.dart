@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../auth_service.dart';
 import '../main.dart';
 
-class TenantDashboard extends StatelessWidget {
+class TenantDashboard extends StatefulWidget {
   final VoidCallback? onLogout;
   final String? userId;
   final String? userEmail;
@@ -13,15 +14,27 @@ class TenantDashboard extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<TenantDashboard> createState() => _TenantDashboardState();
+}
+
+class _TenantDashboardState extends State<TenantDashboard> {
+  String? selectedFacilityId;
+  Map<String, dynamic>? selectedFacility;
+  Map<String, dynamic>? selectedProperty;
+
+  @override
   Widget build(BuildContext context) {
+    print(
+        '[DEBUG] TenantDashboard build: userId=[32m[1m[4m[7m${widget.userId}[0m, userEmail=${widget.userEmail}');
     final currentUser = FirebaseAuth.instance.currentUser;
-    final uid = userId ?? currentUser?.uid;
-    final email = userEmail ?? currentUser?.email;
+    final uid = widget.userId ?? currentUser?.uid;
+    final email = widget.userEmail ?? currentUser?.email;
     if (uid == null && email == null) {
       return Scaffold(
         appBar: AppBar(
           leading: BackButton(),
           title: Text('Tenant Dashboard'),
+          backgroundColor: Colors.black,
         ),
         body: Center(child: Text('No user found. Please log in again.')),
       );
@@ -31,15 +44,15 @@ class TenantDashboard extends StatelessWidget {
       appBar: AppBar(
         leading: BackButton(),
         title: Text('Tenant Dashboard'),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: Colors.green),
             tooltip: 'Logout',
             onPressed: () async {
               await AuthService().signOut();
-              if (onLogout != null) {
-                onLogout!();
+              if (widget.onLogout != null) {
+                widget.onLogout!();
               } else {
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -51,146 +64,304 @@ class TenantDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (userSnapshot.hasError ||
-              !userSnapshot.hasData ||
-              !userSnapshot.data!.exists) {
-            return Center(child: Text('Error loading user data'));
-          }
-          final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
-          final List<dynamic> assignedPropertyIds =
-              userData?['properties'] ?? [];
-          if (assignedPropertyIds.isEmpty) {
-            return Center(child: Text('No properties assigned to you yet.'));
-          }
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('properties')
-                .where(FieldPath.documentId, whereIn: assignedPropertyIds)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                // Print the error to the browser console for debugging
-                print('[TenantDashboard] Error loading properties:');
-                print(snapshot.error);
-                if (snapshot.stackTrace != null) print(snapshot.stackTrace);
-                // Show the UI with disabled dropdown and enabled Add Property button
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Manage a Property',
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF8AC611))),
-                    SizedBox(height: 24),
-                    DropdownButton<String>(
-                      value: null,
-                      hint: Text('Choose Property'),
-                      items: [],
-                      onChanged: null, // Disabled
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFC65611),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text('Add New Property'),
-                      onPressed: () {
-                        // TODO: Implement add property dialog or navigation
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    Center(
-                        child: Text('Error loading properties',
-                            style: TextStyle(color: Colors.red))),
-                  ],
-                );
-              }
-              final properties = snapshot.data?.docs ?? [];
-              if (properties.isEmpty) {
-                return Center(child: Text('No assigned properties found.'));
-              }
-              return ListView.builder(
-                itemCount: properties.length,
-                itemBuilder: (context, index) {
-                  final doc = properties[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    child: ListTile(
-                      title: Text(doc['name'] ?? 'Unnamed'),
-                      subtitle: Text(doc['location'] ?? ''),
-                      trailing: Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TenantPropertyDetailPage(
-                              propertyDoc: doc,
-                              tenantEmail: email,
+      body: selectedFacilityId == null
+          ? _buildFacilityList(context, uid ?? '', email)
+          : _buildTenantFacilityDashboard(context),
+    );
+  }
+
+  Widget _buildFacilityList(BuildContext context, String uid, String? email) {
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance.collection('properties').get(),
+      builder: (context, propSnap) {
+        if (propSnap.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (propSnap.hasError) {
+          return Center(child: Text('Error loading properties'));
+        }
+        final properties = propSnap.data?.docs ?? [];
+        List<Map<String, dynamic>> myFacilities = [];
+        for (final prop in properties) {
+          final propData = prop.data() as Map<String, dynamic>;
+          final propId = prop.id;
+          // Removed unused tenantsSnap variable
+          myFacilities.add({
+            'propertyId': propId,
+            'propertyName': propData['name'] ?? '',
+            'propertyManagerPhone':
+                propData['ownerPhone'] ?? propData['managerPhone'] ?? '',
+            'propertyManagerEmail':
+                propData['ownerEmail'] ?? propData['managerEmail'] ?? '',
+            'propertyManagerName':
+                propData['ownerName'] ?? propData['managerName'] ?? '',
+            'propertyDoc': prop,
+          });
+        }
+        return ListView(
+          padding: EdgeInsets.all(16),
+          children: [
+            Text('Your Facilities',
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black)),
+            SizedBox(height: 16),
+            ...properties.map((prop) {
+              final propData = prop.data() as Map<String, dynamic>;
+              return FutureBuilder<QuerySnapshot>(
+                future: prop.reference
+                    .collection('tenants')
+                    .where('email', isEqualTo: email)
+                    .get(),
+                builder: (context, tenantSnap) {
+                  if (tenantSnap.connectionState == ConnectionState.waiting) {
+                    return SizedBox();
+                  }
+                  final tenants = tenantSnap.data?.docs ?? [];
+                  if (tenants.isEmpty) return SizedBox();
+                  return Column(
+                    children: tenants.map((tenantDoc) {
+                      final tenantData =
+                          tenantDoc.data() as Map<String, dynamic>;
+                      final facilityNumber = tenantData['facilityNumber'] ?? '';
+                      return Card(
+                        color: Colors.green[50],
+                        child: ListTile(
+                          leading:
+                              Icon(Icons.meeting_room, color: Colors.green),
+                          title: Text('Room $facilityNumber',
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold)),
+                          subtitle: Text(propData['name'] ?? '',
+                              style: TextStyle(color: Colors.black)),
+                          trailing: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
+                            child: Text('Manage'),
+                            onPressed: () {
+                              setState(() {
+                                selectedFacilityId = tenantDoc.id;
+                                selectedFacility = tenantData;
+                                selectedProperty = propData;
+                              });
+                            },
                           ),
-                        );
-                      },
-                    ),
+                          onTap: () {
+                            setState(() {
+                              selectedFacilityId = tenantDoc.id;
+                              selectedFacility = tenantData;
+                              selectedProperty = propData;
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
                   );
                 },
               );
-            },
-          );
-        },
-      ),
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 
-  Widget _dashboardHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTenantFacilityDashboard(BuildContext context) {
+    final facility = selectedFacility ?? {};
+    final property = selectedProperty ?? {};
+    final managerPhone =
+        property['ownerPhone'] ?? property['managerPhone'] ?? '';
+    final managerEmail =
+        property['ownerEmail'] ?? property['managerEmail'] ?? '';
+    final managerName = property['ownerName'] ?? property['managerName'] ?? '';
+    final facilityNumber =
+        facility['facilityNumber'] ?? facility['number'] ?? '';
+    final facilityId = selectedFacilityId;
+    return ListView(
+      padding: EdgeInsets.all(16),
       children: [
-        Text(title,
-            style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8AC611))),
-        SizedBox(height: 8),
-        Text(subtitle, style: TextStyle(fontSize: 16, color: Colors.black54)),
-      ],
-    );
-  }
-
-  Widget _dashboardCard(BuildContext context,
-      {required IconData icon,
-      required String title,
-      required Color color,
-      required VoidCallback onTap}) {
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color, size: 28),
+        Card(
+          color: Colors.black,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Facility/Room $facilityNumber',
+                    style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text(property['name'] ?? '',
+                    style: TextStyle(color: Colors.white, fontSize: 16)),
+                SizedBox(height: 8),
+                Text('Manager: $managerName',
+                    style: TextStyle(color: Colors.white)),
+                Text('Phone: $managerPhone',
+                    style: TextStyle(color: Colors.white)),
+                Text('Email: $managerEmail',
+                    style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
         ),
-        title: Text(title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        trailing: Icon(Icons.arrow_forward_ios, color: color),
-        onTap: onTap,
-      ),
+        SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            ElevatedButton.icon(
+              icon: Icon(Icons.payment, color: Colors.white),
+              label: Text('Pay Rent', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () {
+                // TODO: Implement rent payment logic
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Rent payment coming soon!')),
+                );
+              },
+            ),
+            ElevatedButton.icon(
+              icon: Icon(Icons.history, color: Colors.white),
+              label: Text('Payment History',
+                  style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () {
+                // TODO: Implement payment history logic
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Payment history coming soon!')),
+                );
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 24),
+        Text('Contact Manager',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontSize: 18)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(
+              icon: Icon(FontAwesomeIcons.whatsapp,
+                  color: Colors.green, size: 32),
+              tooltip: 'WhatsApp',
+              onPressed: () async {
+                if (managerPhone.isNotEmpty) {
+                  final url = 'https://wa.me/$managerPhone';
+                  if (await canLaunch(url)) {
+                    await launch(url);
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.email, color: Colors.green, size: 32),
+              tooltip: 'Email',
+              onPressed: () async {
+                if (managerEmail.isNotEmpty) {
+                  final url = 'mailto:$managerEmail';
+                  if (await canLaunch(url)) {
+                    await launch(url);
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.phone, color: Colors.green, size: 32),
+              tooltip: 'Call',
+              onPressed: () async {
+                if (managerPhone.isNotEmpty) {
+                  final url = 'tel:$managerPhone';
+                  if (await canLaunch(url)) {
+                    await launch(url);
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.sms, color: Colors.green, size: 32),
+              tooltip: 'SMS',
+              onPressed: () async {
+                if (managerPhone.isNotEmpty) {
+                  final url = 'sms:$managerPhone';
+                  if (await canLaunch(url)) {
+                    await launch(url);
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 24),
+        FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('payments')
+              .where('facilityId', isEqualTo: facilityId)
+              .get(),
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return Center(child: Text('Error loading stats'));
+            }
+            final payments = snap.data?.docs ?? [];
+            double totalPaid = 0;
+            double totalUnpaid = 0;
+            for (final p in payments) {
+              final d = p.data() as Map<String, dynamic>;
+              totalPaid += double.tryParse(d['amount']?.toString() ?? '0') ?? 0;
+            }
+            // For demo, assume rent is in facility['rent']
+            final rent =
+                double.tryParse(facility['rent']?.toString() ?? '0') ?? 0;
+            totalUnpaid = rent > 0 ? (rent - totalPaid) : 0;
+            return Card(
+              color: Colors.green[50],
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Statistics',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontSize: 18)),
+                    SizedBox(height: 8),
+                    Text('Total Paid: UGX ${totalPaid.toStringAsFixed(0)}',
+                        style: TextStyle(color: Colors.black)),
+                    Text('Total Unpaid: UGX ${totalUnpaid.toStringAsFixed(0)}',
+                        style: TextStyle(color: Colors.black)),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        SizedBox(height: 24),
+        TextButton(
+          child:
+              Text('Back to Facilities', style: TextStyle(color: Colors.green)),
+          onPressed: () {
+            setState(() {
+              selectedFacilityId = null;
+              selectedFacility = null;
+              selectedProperty = null;
+            });
+          },
+        ),
+      ],
     );
   }
 }

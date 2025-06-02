@@ -19,6 +19,7 @@ const Color m3OnSurface = Color(0xFF1C1B1F); // On Surface
 const Color m3Error = Color(0xFFB3261E); // Error
 const Color m3OnError = Color(0xFFFFFFFF); // On Error
 const Color m3Outline = Color(0xFFB5C9B8); // Muted green outline
+const Color m3Grey = Color.fromARGB(255, 75, 75, 75); // Shadow color
 
 class ManagerDashboard extends StatefulWidget {
   final VoidCallback? onLogout;
@@ -81,7 +82,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           color: m3Primary)),
                   SizedBox(height: 4),
                   Text(widget.userEmail!,
-                      style: TextStyle(fontSize: 16, color: m3Secondary)),
+                      style: TextStyle(fontSize: 16, color: m3Grey)),
                   SizedBox(height: 24),
                 ],
                 Expanded(
@@ -234,7 +235,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                               fontWeight: FontWeight.bold, color: m3OnSurface)),
                       subtitle: Text(
                         '${data['location'] ?? ''}\n${data['category'] ?? ''}',
-                        style: TextStyle(color: m3Secondary),
+                        style: TextStyle(color: m3Grey),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -927,6 +928,9 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                     builder: (context) => TenantDatabasePage(
                       propertyId: selectedPropertyId!,
                       propertyName: selectedPropertyName ?? '',
+                      onAddTenant: () => _addTenantDialog(
+                          context, selectedPropertyId!,
+                          propertyName: selectedPropertyName ?? ''),
                     ),
                   ),
                 );
@@ -1048,11 +1052,12 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       Text('Male: $male'),
                       Text('Female: $female'),
                       SizedBox(height: 8),
-                      Text('Total Rent Due: ₦${totalRent.toStringAsFixed(2)}'),
+                      Text(
+                          'Total Rent Due: UGX${totalRent.toStringAsFixed(2)}'),
                       SizedBox(height: 8),
-                      Text('Total Paid: ₦${totalPaid.toStringAsFixed(2)}'),
+                      Text('Total Paid: UGX${totalPaid.toStringAsFixed(2)}'),
                       SizedBox(height: 8),
-                      Text('Outstanding: ₦${outstanding.toStringAsFixed(2)}'),
+                      Text('Outstanding: UGX${outstanding.toStringAsFixed(2)}'),
                     ],
                   ),
                   actions: [
@@ -1215,7 +1220,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                       TextFormField(
                         controller: rentController,
                         decoration: InputDecoration(
-                            labelText: 'Base Rent Amount (per month)'),
+                            labelText: 'Base Rent Amount (/month)'),
                         keyboardType: TextInputType.number,
                         validator: (v) =>
                             v == null || v.trim().isEmpty ? 'Required' : null,
@@ -1425,12 +1430,10 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                 'size': sizeController.text.trim(),
                                 'floorLevel': floorLevelController.text.trim(),
                                 'visibility': visibilityController.text.trim(),
-                                'powerBackup': powerBackup,
                                 'anchorProximity': anchorProximity,
                                 'footTraffic':
                                     footTrafficController.text.trim(),
                               });
-                              // Also update the spaces subcollection for relevant properties
                               await FirebaseFirestore.instance
                                   .collection('properties')
                                   .doc(propertyId)
@@ -1464,7 +1467,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                 'size': sizeController.text.trim(),
                                 'floorLevel': floorLevelController.text.trim(),
                                 'visibility': visibilityController.text.trim(),
-                                'powerBackup': powerBackup,
                                 'anchorProximity': anchorProximity,
                                 'footTraffic':
                                     footTrafficController.text.trim(),
@@ -1519,9 +1521,22 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
         .toList();
     List<DropdownMenuItem<String>> facilityItems = facilities.map((f) {
+      final rent = f['rent'];
+      String formattedRent = '';
+      if (rent != null) {
+        try {
+          final num rentNum = num.parse(rent.toString());
+          formattedRent = rentNum.toStringAsFixed(0).replaceAllMapped(
+                RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                (match) => ',',
+              );
+        } catch (_) {
+          formattedRent = rent.toString();
+        }
+      }
       return DropdownMenuItem<String>(
         value: f['id'],
-        child: Text('${f['number']} - ₦${f['rent']}'),
+        child: Text('${f['number']} - UGX $formattedRent'),
       );
     }).toList();
     String? selectedFacilityId = tenantDoc?['facilityId'];
@@ -1662,6 +1677,22 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                   'role': 'tenant',
                                   'createdAt': FieldValue.serverTimestamp(),
                                 });
+                              } else {
+                                // If user exists but role is undefined/null/empty, update to 'tenant'
+                                final userDoc = userDocs.docs.first;
+                                final userData =
+                                    userDoc.data() as Map<String, dynamic>;
+                                final currentRole = (userData['role'] ?? '')
+                                    .toString()
+                                    .trim()
+                                    .toLowerCase();
+                                if (currentRole.isEmpty ||
+                                    currentRole == 'undefined' ||
+                                    currentRole == 'null') {
+                                  await usersRef
+                                      .doc(userDoc.id)
+                                      .update({'role': 'tenant'});
+                                }
                               }
                               Navigator.pop(context);
                             } catch (e) {
@@ -1702,10 +1733,13 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
 class TenantDatabasePage extends StatefulWidget {
   final String propertyId;
   final String propertyName;
-  const TenantDatabasePage(
-      {Key? key, required this.propertyId, required this.propertyName})
-      : super(key: key);
-
+  final Future<void> Function()? onAddTenant;
+  const TenantDatabasePage({
+    Key? key,
+    required this.propertyId,
+    required this.propertyName,
+    this.onAddTenant,
+  }) : super(key: key);
   @override
   State<TenantDatabasePage> createState() => _TenantDatabasePageState();
 }
@@ -1713,17 +1747,27 @@ class TenantDatabasePage extends StatefulWidget {
 class _TenantDatabasePageState extends State<TenantDatabasePage> {
   String searchQuery = '';
 
-  // Use the parent dashboard state's _addTenantDialog
+  // Remove findAncestorStateOfType logic for add tenant
   Future<void> _showAddOrEditTenantDialog(
       {Map<String, dynamic>? tenantDoc, String? tenantId}) async {
+    if (tenantDoc == null && tenantId == null && widget.onAddTenant != null) {
+      await widget.onAddTenant!();
+      return;
+    }
+    // ...existing code for edit (if needed)...
     final state = context.findAncestorStateOfType<_ManagerDashboardState>();
     if (state != null) {
       await state._addTenantDialog(
         context,
         widget.propertyId,
-        propertyName: widget.propertyName,
         tenantDoc: tenantDoc,
         tenantId: tenantId,
+        propertyName: widget.propertyName,
+      );
+    } else {
+      // fallback: show a dialog or snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Edit not available in this context.')),
       );
     }
   }
@@ -1756,7 +1800,7 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Tenant Database - ${widget.propertyName}'),
+        title: Text('Tenants - ${widget.propertyName}'),
         backgroundColor: m3Primary,
         foregroundColor: m3OnPrimary,
       ),
@@ -1779,7 +1823,11 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                     elevation: 0,
                   ),
                   onPressed: () {
-                    _showAddOrEditTenantDialog();
+                    if (widget.onAddTenant != null) {
+                      widget.onAddTenant!();
+                    } else {
+                      _showAddOrEditTenantDialog();
+                    }
                   },
                 ),
                 Spacer(),
@@ -1842,20 +1890,42 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                     itemBuilder: (context, i) {
                       final t = filtered[i];
                       final data = t.data() as Map<String, dynamic>;
+                      final facility = (data['facilityNumber'] != null &&
+                              data['facilityNumber'].toString().isNotEmpty)
+                          ? 'Facility/Room: ${data['facilityNumber']}'
+                          : '';
                       return ListTile(
                         leading: CircleAvatar(child: Icon(Icons.person)),
                         title: Text(data['name'] ?? ''),
-                        subtitle: Text(
-                            '${data['phone'] ?? ''}\n${data['email'] ?? ''}'),
+                        subtitle: Text([facility, data['phone'] ?? '']
+                            .where((s) =>
+                                s != null && s.toString().trim().isNotEmpty)
+                            .join(' | ')),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.edit, color: m3Primary),
+                              icon: Icon(Icons.edit, color: Color(0xFF8AC611)),
                               tooltip: 'Edit Tenant',
-                              onPressed: () {
-                                _showAddOrEditTenantDialog(
-                                    tenantDoc: data, tenantId: t.id);
+                              onPressed: () async {
+                                final state = context.findAncestorStateOfType<
+                                    _ManagerDashboardState>();
+                                if (state != null) {
+                                  await state._addTenantDialog(
+                                    context,
+                                    widget
+                                        .propertyId, // Use propertyId from widget
+                                    tenantDoc: data,
+                                    tenantId: t.id,
+                                    propertyName: widget.propertyName,
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            'Edit not available in this context.')),
+                                  );
+                                }
                               },
                             ),
                             IconButton(
@@ -1874,11 +1944,12 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                                           onPressed: () =>
                                               Navigator.pop(context, false)),
                                       ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red),
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: Text('Delete')),
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text('Delete'),
+                                      ),
                                     ],
                                   ),
                                 );
@@ -1928,7 +1999,23 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
         TextEditingController(text: facilityDoc?['number'] ?? '');
     TextEditingController rentController =
         TextEditingController(text: facilityDoc?['rent']?.toString() ?? '');
+    TextEditingController bedroomsController =
+        TextEditingController(text: facilityDoc?['bedrooms']?.toString() ?? '');
+    TextEditingController bathroomsController = TextEditingController(
+        text: facilityDoc?['bathrooms']?.toString() ?? '');
+    TextEditingController kitchenDescController =
+        TextEditingController(text: facilityDoc?['kitchenDesc'] ?? '');
+    String? facilityType = facilityDoc?['type'];
     bool isLoading = false;
+
+    // Fetch property type for this property
+    DocumentSnapshot propertyDoc = await FirebaseFirestore.instance
+        .collection('properties')
+        .doc(widget.propertyId)
+        .get();
+    String propertyType =
+        (propertyDoc.data() as Map<String, dynamic>?)?['category'] ?? '';
+
     await showDialog(
       context: context,
       builder: (context) {
@@ -1940,26 +2027,75 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                   : 'Edit Facility/Room'),
               content: Form(
                 key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: numberController,
-                      decoration:
-                          InputDecoration(labelText: 'Facility/Room Number'),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
-                    ),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: rentController,
-                      decoration:
-                          InputDecoration(labelText: 'Rent Amount (UGX)'),
-                      keyboardType: TextInputType.number,
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Required' : null,
-                    ),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: numberController,
+                        decoration:
+                            InputDecoration(labelText: 'Facility/Room Number'),
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: rentController,
+                        decoration:
+                            InputDecoration(labelText: 'Rent Amount (UGX)'),
+                        keyboardType: TextInputType.number,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      if (propertyType == 'Residential Rentals' ||
+                          propertyType == 'Residential Apartments') ...[
+                        TextFormField(
+                          controller: bedroomsController,
+                          decoration:
+                              InputDecoration(labelText: 'Number of Bedrooms'),
+                          keyboardType: TextInputType.number,
+                        ),
+                        SizedBox(height: 8),
+                        TextFormField(
+                          controller: bathroomsController,
+                          decoration:
+                              InputDecoration(labelText: 'Number of Bathrooms'),
+                          keyboardType: TextInputType.number,
+                        ),
+                        SizedBox(height: 8),
+                        TextFormField(
+                          controller: kitchenDescController,
+                          decoration: InputDecoration(
+                            labelText: 'More features',
+                          ),
+                        ),
+                      ],
+                      if (propertyType == 'Shop Rentals' ||
+                          propertyType == 'Mall Commercial Spaces') ...[
+                        DropdownButtonFormField<String>(
+                          value: facilityType,
+                          decoration:
+                              InputDecoration(labelText: 'Facility Type'),
+                          items: [
+                            DropdownMenuItem(
+                                value: 'Shop', child: Text('Shop')),
+                            DropdownMenuItem(
+                                value: 'Office', child: Text('Office')),
+                            DropdownMenuItem(
+                                value: 'Kiosk', child: Text('Kiosk')),
+                            DropdownMenuItem(
+                                value: 'Stall', child: Text('Stall')),
+                          ],
+                          onChanged: (val) =>
+                              setState(() => facilityType = val),
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Required' : null,
+                        ),
+                        SizedBox(height: 8),
+                      ],
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -1985,6 +2121,23 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                                         0,
                                 'propertyId': widget.propertyId,
                                 'createdAt': FieldValue.serverTimestamp(),
+                                if (propertyType == 'Residential Rentals' ||
+                                    propertyType ==
+                                        'Residential Apartments') ...{
+                                  'bedrooms': int.tryParse(
+                                          bedroomsController.text.trim()) ??
+                                      0,
+                                  'bathrooms': int.tryParse(
+                                          bathroomsController.text.trim()) ??
+                                      0,
+                                  'kitchenDesc':
+                                      kitchenDescController.text.trim(),
+                                },
+                                if (propertyType == 'Shop Rentals' ||
+                                    propertyType ==
+                                        'Mall Commercial Spaces') ...{
+                                  'type': facilityType,
+                                },
                               };
                               final ref = FirebaseFirestore.instance
                                   .collection('properties')

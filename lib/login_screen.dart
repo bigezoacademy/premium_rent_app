@@ -4,9 +4,10 @@ import 'auth_service.dart';
 import 'google_signin_button.dart'; // Import the GoogleSignInButton
 import 'pages/manager_dashboard.dart'; // Import the ManagerDashboard
 import 'pages/owner_dashboard.dart'; // Import the OwnerDashboard
-import 'pages/tenant_property_select.dart'; // Import the TenantPropertySelectScreen
+import 'pages/tenant_dashboard.dart'; // Import the TenantDashboard
 import 'pages/developer_dashboard.dart'; // Import the DeveloperDashboard
 import 'pages/public_property_listing.dart'; // Import the PublicPropertyListingPage
+import 'pages/tenant_entry.dart'; // Ensure NewUserLandingPage is imported
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -49,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: isLoading ? null : _login,
                 child: Text('Login'),
               ),
-              SizedBox(height: 12),
+              SizedBox(height: 30),
               GoogleSignInButton(
                 isLoading: isLoading,
                 onPressed: isLoading ? null : _signInWithGoogle,
@@ -79,37 +80,61 @@ class _LoginScreenState extends State<LoginScreen> {
               .doc(user.uid)
               .get();
           if (!doc.exists) {
-            // User does not exist, show dialog with options
-            _showNewUserOptions(context);
+            // User does not exist, create with undefined role
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'email': user.email,
+              // 'role' intentionally left undefined
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NewUserLandingPage(),
+              ),
+            );
             setState(() {
               isLoading = false;
             });
             return;
           }
           final data = doc.data() ?? {};
-          final role = data['role'] ?? 'Tenant';
+          final role = (data['role'] ?? '').toString();
           final name = data['name'] ?? '';
           final email = data['email'] ?? user.email ?? '';
-          // Show detected role
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Detected role: ' + role),
-              duration: Duration(seconds: 2),
-            ),
-          );
           Widget dashboard;
           if (email == 'grealmkids@gmail.com') {
             dashboard = DeveloperDashboard();
-          } else if (role == 'Property Manager') {
+          } else if (role.toLowerCase() == 'property manager') {
             dashboard = ManagerDashboard(userName: name, userEmail: email);
-          } else if (role == 'Property Owner') {
+          } else if (role.toLowerCase() == 'property owner') {
             dashboard = OwnerDashboard();
-          } else if (role == 'Tenant') {
-            dashboard =
-                TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+          } else if (role.toLowerCase() == 'tenant') {
+            dashboard = TenantDashboard(userId: user.uid, userEmail: email);
+          } else if (role.trim().isEmpty ||
+              role == 'null' ||
+              role == 'undefined') {
+            // Redirect to welcome page for undefined/null/empty role
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NewUserLandingPage(),
+              ),
+            );
+            setState(() {
+              isLoading = false;
+            });
+            return;
           } else {
             // Fallback: treat as new user
-            _showNewUserOptions(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NewUserLandingPage(),
+              ),
+            );
             setState(() {
               isLoading = false;
             });
@@ -148,32 +173,30 @@ class _LoginScreenState extends State<LoginScreen> {
             .doc(user.uid)
             .get();
         if (!userDoc.exists) {
-          _showNewUserOptions(context);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NewUserLandingPage(),
+            ),
+          );
           setState(() {
             isLoading = false;
           });
           return;
         }
         final data = userDoc.data() ?? {};
-        final role = data['role'] ?? 'Tenant';
+        final role = (data['role'] ?? 'Tenant').toString();
         final name = data['name'] ?? '';
         final email = data['email'] ?? user.email ?? '';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Detected role: ' + role),
-            duration: Duration(seconds: 2),
-          ),
-        );
         Widget dashboard;
         if (email == 'grealmkids@gmail.com') {
           dashboard = DeveloperDashboard();
-        } else if (role == 'Property Manager') {
+        } else if (role.toLowerCase() == 'property manager') {
           dashboard = ManagerDashboard(userName: name, userEmail: email);
-        } else if (role == 'Property Owner') {
+        } else if (role.toLowerCase() == 'property owner') {
           dashboard = OwnerDashboard();
-        } else if (role == 'Tenant') {
-          dashboard =
-              TenantPropertySelectScreen(userId: user.uid, userEmail: email);
+        } else if (role.toLowerCase() == 'tenant') {
+          dashboard = TenantDashboard(userId: user.uid, userEmail: email);
         } else {
           _showNewUserOptions(context);
           setState(() {
