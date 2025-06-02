@@ -798,12 +798,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           if (_formKey.currentState!.validate()) {
                             setState(() => isLoading = true);
                             try {
-                              final newPhotoUrls =
-                                  await uploadImages(selectedImages);
-                              final allPhotoUrls = [
-                                ...uploadedPhotoUrls,
-                                ...newPhotoUrls
-                              ];
+                              // Remove facility update logic from here
+                              // Only update property fields and photos
                               await FirebaseFirestore.instance
                                   .collection('properties')
                                   .doc(doc.id)
@@ -820,7 +816,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                             'Residential Apartments')
                                     ? null
                                     : null,
-                                'photos': allPhotoUrls,
+                                'photos': uploadedPhotoUrls,
                               });
                               Navigator.pop(context);
                             } catch (e) {
@@ -937,6 +933,11 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               },
             ),
             Spacer(),
+          ],
+        ),
+        SizedBox(height: 10),
+        Row(
+          children: [
             ElevatedButton.icon(
               icon: Icon(Icons.person_add, color: Colors.white),
               label: Text('Add Tenant'),
@@ -952,36 +953,29 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                     propertyName: selectedPropertyName ?? '');
               },
             ),
+            Spacer(),
           ],
         ),
-        SizedBox(height: 24),
+        SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: _dashboardCard(
                 context,
-                icon: Icons.attach_money,
-                title: 'Set Rent & Discounts',
+                icon: Icons.meeting_room,
+                title: 'Facilities/Rooms',
                 color: m3Secondary,
                 onTap: () {
                   if (selectedPropertyId != null) {
-                    FirebaseFirestore.instance
-                        .collection('properties')
-                        .doc(selectedPropertyId)
-                        .get()
-                        .then((doc) {
-                      final data = doc.data() as Map<String, dynamic>?;
-                      final category = data?['category'] ?? '';
-                      if (category.isNotEmpty) {
-                        _showSetRentAndDiscountsDialog(
-                            context, selectedPropertyId!, category);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Property category missing...')),
-                        );
-                      }
-                    });
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FacilitiesPage(
+                          propertyId: selectedPropertyId!,
+                          propertyName: selectedPropertyName ?? '',
+                        ),
+                      ),
+                    );
                   }
                 },
               ),
@@ -1381,6 +1375,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           keyboardType: TextInputType.number,
                         ),
                       ],
+                      SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -1513,6 +1508,24 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     String? gender = tenantDoc?['gender'] ?? null;
     bool isLoading = false;
     String? errorMsg;
+
+    // Fetch facilities for this property
+    final facilitiesSnap = await FirebaseFirestore.instance
+        .collection('properties')
+        .doc(propertyId)
+        .collection('facilities')
+        .get();
+    final facilities = facilitiesSnap.docs
+        .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+        .toList();
+    List<DropdownMenuItem<String>> facilityItems = facilities.map((f) {
+      return DropdownMenuItem<String>(
+        value: f['id'],
+        child: Text('${f['number']} - ₦${f['rent']}'),
+      );
+    }).toList();
+    String? selectedFacilityId = tenantDoc?['facilityId'];
+
     await showDialog(
       context: context,
       builder: (context) {
@@ -1568,6 +1581,16 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                             v == null || v.isEmpty ? 'Required' : null,
                       ),
                       SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedFacilityId,
+                        decoration: InputDecoration(labelText: 'Facility/Room'),
+                        items: facilityItems,
+                        onChanged: (val) =>
+                            setState(() => selectedFacilityId = val),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
                       if (errorMsg != null) ...[
                         SizedBox(height: 8),
                         Text(errorMsg!, style: TextStyle(color: Colors.red)),
@@ -1592,6 +1615,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           if (_formKey.currentState!.validate()) {
                             setState(() => isLoading = true);
                             try {
+                              final selectedFacility = facilities.firstWhere(
+                                  (f) => f['id'] == selectedFacilityId);
                               final tenantData = {
                                 'name': nameController.text.trim(),
                                 'displayName': nameController.text.trim(),
@@ -1604,6 +1629,9 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                 'createdAt': FieldValue.serverTimestamp(),
                                 'propertyId': propertyId,
                                 'propertyName': propertyName,
+                                'facilityId': selectedFacilityId,
+                                'facilityNumber': selectedFacility['number'],
+                                'facilityRent': selectedFacility['rent'],
                               };
                               final tenantsRef = FirebaseFirestore.instance
                                   .collection('properties')
@@ -1867,6 +1895,263 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                           ],
                         ),
                         onTap: () => _showTenantDetailsDialogLocal(data),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FacilitiesPage extends StatefulWidget {
+  final String propertyId;
+  final String propertyName;
+  const FacilitiesPage(
+      {Key? key, required this.propertyId, required this.propertyName})
+      : super(key: key);
+  @override
+  State<FacilitiesPage> createState() => _FacilitiesPageState();
+}
+
+class _FacilitiesPageState extends State<FacilitiesPage> {
+  String searchQuery = '';
+
+  Future<void> _showAddOrEditFacilityDialog(
+      {Map<String, dynamic>? facilityDoc, String? facilityId}) async {
+    final _formKey = GlobalKey<FormState>();
+    TextEditingController numberController =
+        TextEditingController(text: facilityDoc?['number'] ?? '');
+    TextEditingController rentController =
+        TextEditingController(text: facilityDoc?['rent']?.toString() ?? '');
+    bool isLoading = false;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(facilityId == null
+                  ? 'New Facility/Room'
+                  : 'Edit Facility/Room'),
+              content: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: numberController,
+                      decoration:
+                          InputDecoration(labelText: 'Facility/Room Number'),
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty ? 'Required' : null,
+                    ),
+                    SizedBox(height: 8),
+                    TextFormField(
+                      controller: rentController,
+                      decoration:
+                          InputDecoration(labelText: 'Rent Amount (UGX)'),
+                      keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty ? 'Required' : null,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: m3Primary,
+                    foregroundColor: m3OnPrimary,
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setState(() => isLoading = true);
+                            try {
+                              final data = {
+                                'number': numberController.text.trim(),
+                                'rent':
+                                    int.tryParse(rentController.text.trim()) ??
+                                        0,
+                                'propertyId': widget.propertyId,
+                                'createdAt': FieldValue.serverTimestamp(),
+                              };
+                              final ref = FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(widget.propertyId)
+                                  .collection('facilities');
+                              if (facilityId == null) {
+                                await ref.add(data);
+                              } else {
+                                await ref.doc(facilityId).update(data);
+                              }
+                              Navigator.pop(context);
+                            } catch (e) {
+                              setState(() => isLoading = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                  child: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text(facilityId == null ? 'Add' : 'Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Facilities/Rooms - ${widget.propertyName}'),
+        backgroundColor: m3Primary,
+        foregroundColor: m3OnPrimary,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  icon: Icon(Icons.add),
+                  label: Text('New Facility/Room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: m3Primary,
+                    foregroundColor: m3OnPrimary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => _showAddOrEditFacilityDialog(),
+                ),
+                Spacer(),
+              ],
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search by facility/room number',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    ),
+                    onChanged: (val) =>
+                        setState(() => searchQuery = val.trim().toLowerCase()),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('properties')
+                    .doc(widget.propertyId)
+                    .collection('facilities')
+                    .orderBy('number')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading facilities'));
+                  }
+                  final facilities = snapshot.data?.docs ?? [];
+                  final filtered = facilities.where((f) {
+                    final data = f.data() as Map<String, dynamic>;
+                    if (searchQuery.isEmpty) return true;
+                    final number =
+                        (data['number'] ?? '').toString().toLowerCase();
+                    return number.contains(searchQuery);
+                  }).toList();
+                  if (filtered.isEmpty) {
+                    return Center(child: Text('No facilities found.'));
+                  }
+                  return ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, i) => Divider(),
+                    itemBuilder: (context, i) {
+                      final f = filtered[i];
+                      final data = f.data() as Map<String, dynamic>;
+                      return ListTile(
+                        leading: Icon(Icons.meeting_room, color: m3Primary),
+                        title: Text('Room ${data['number'] ?? ''}'),
+                        subtitle: Text('Rent: UGX ${data['rent'] ?? ''}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit, color: m3Primary),
+                              tooltip: 'Edit',
+                              onPressed: () => _showAddOrEditFacilityDialog(
+                                  facilityDoc: data, facilityId: f.id),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete',
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Delete Facility/Room'),
+                                    content: Text(
+                                        'Are you sure you want to delete this facility/room?'),
+                                    actions: [
+                                      TextButton(
+                                          child: Text('Cancel'),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false)),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await FirebaseFirestore.instance
+                                      .collection('properties')
+                                      .doc(widget.propertyId)
+                                      .collection('facilities')
+                                      .doc(f.id)
+                                      .delete();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
                       );
                     },
                   );
