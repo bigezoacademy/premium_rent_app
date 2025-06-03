@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:intl/intl.dart';
 
 class TenantPropertySelector extends StatefulWidget {
   final String userEmail;
@@ -306,6 +307,7 @@ class PropertyPublicListing extends StatelessWidget {
                 final prop = properties[i];
                 final data = prop.data() as Map<String, dynamic>;
                 final photos = (data['photos'] as List?) ?? [];
+                final rent = data['rent'] ?? data['price'] ?? '';
                 return InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () {
@@ -374,6 +376,17 @@ class PropertyPublicListing extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 16, color: Colors.black87),
                                 ),
+                                if (rent.toString().isNotEmpty) ...[
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Rent: UGX ${formatAmount(rent)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFC65611),
+                                    ),
+                                  ),
+                                ],
                                 if (data['amenities'] != null &&
                                     data['amenities']
                                         .toString()
@@ -536,6 +549,7 @@ class PropertyDetailsPage extends StatelessWidget {
     if (displayWhatsapp.trim().startsWith('0')) {
       displayWhatsapp = '+256' + displayWhatsapp.trim().substring(1);
     }
+    final rent = propertyData['rent'] ?? propertyData['price'] ?? '';
     return Scaffold(
       appBar: AppBar(
         title: Text(propertyData['name'] ?? 'Property Details'),
@@ -621,8 +635,29 @@ class PropertyDetailsPage extends StatelessWidget {
                 ),
               ],
             ),
+          if (rent.toString().isNotEmpty) ...[
+            SizedBox(height: 16),
+            Text(
+              'Rent: UGX ${formatAmount(rent)}',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFC65611),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+}
+
+String formatAmount(dynamic amount) {
+  if (amount == null) return '';
+  try {
+    final num value = amount is num ? amount : num.parse(amount.toString());
+    return NumberFormat('#,##0').format(value);
+  } catch (_) {
+    return amount.toString();
   }
 }
