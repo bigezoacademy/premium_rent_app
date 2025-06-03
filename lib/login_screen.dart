@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuthException
 import 'auth_service.dart';
 import 'google_signin_button.dart'; // Import the GoogleSignInButton
 import 'pages/manager_dashboard.dart'; // Import the ManagerDashboard
@@ -80,14 +81,20 @@ class _LoginScreenState extends State<LoginScreen> {
               .doc(user.uid)
               .get();
           if (!doc.exists) {
-            // User does not exist, create with undefined role
+            // User does not exist, create with role 'null'
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
                 .set({
               'email': user.email,
-              // 'role' intentionally left undefined
+              'role': 'null',
               'createdAt': FieldValue.serverTimestamp(),
+            });
+            print(
+                '[LOGIN] Created new user with role null, redirecting to NewUserLandingPage');
+            setState(() {
+              error = '';
+              isLoading = false;
             });
             Navigator.pushReplacement(
               context,
@@ -95,15 +102,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 builder: (context) => NewUserLandingPage(),
               ),
             );
-            setState(() {
-              isLoading = false;
-            });
             return;
           }
           final data = doc.data() ?? {};
           final role = (data['role'] ?? '').toString();
           final name = data['name'] ?? '';
           final email = data['email'] ?? user.email ?? '';
+          print('[LOGIN] User role: ' + role);
           Widget dashboard;
           if (email == 'grealmkids@gmail.com') {
             dashboard = DeveloperDashboard();
@@ -116,28 +121,32 @@ class _LoginScreenState extends State<LoginScreen> {
           } else if (role.trim().isEmpty ||
               role == 'null' ||
               role == 'undefined') {
-            // Redirect to welcome page for undefined/null/empty role
+            print(
+                '[LOGIN] User has undefined/null/empty role, redirecting to NewUserLandingPage');
+            setState(() {
+              error = '';
+              isLoading = false;
+            });
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => NewUserLandingPage(),
               ),
             );
-            setState(() {
-              isLoading = false;
-            });
             return;
           } else {
-            // Fallback: treat as new user
+            print(
+                '[LOGIN] Fallback: unknown role, redirecting to NewUserLandingPage');
+            setState(() {
+              error = '';
+              isLoading = false;
+            });
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => NewUserLandingPage(),
               ),
             );
-            setState(() {
-              isLoading = false;
-            });
             return;
           }
           Navigator.pushReplacement(
@@ -145,15 +154,67 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => dashboard),
           );
         } else {
-          // User does not exist, show dialog with options
-          _showNewUserOptions(context);
+          print('[LOGIN] Authentication failed: user is null');
+          setState(() {
+            error = 'Authentication failed. Please try again.';
+            isLoading = false;
+          });
+        }
+      } on FirebaseAuthException catch (e) {
+        print(
+            '[LOGIN] FirebaseAuthException: code=[31m${e.code}[0m, message=${e.message}');
+        if (e.code == 'user-not-found') {
+          try {
+            final user = await AuthService().signUpWithEmail(
+              email: emailController.text.trim(),
+              password: passwordController.text.trim(),
+              role: 'null',
+              profileData: {},
+            );
+            if (user != null) {
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .set({
+                'email': user.email,
+                'role': 'null',
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+              print(
+                  '[LOGIN] Created Firebase Auth and Firestore user doc for new user: ' +
+                      user.uid);
+            }
+            setState(() {
+              error = '';
+              isLoading = false;
+            });
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NewUserLandingPage(),
+              ),
+            );
+          } catch (signupError) {
+            print('[LOGIN] Failed to create Firebase Auth/Firestore user: ' +
+                signupError.toString());
+            setState(() {
+              error = 'Failed to create account: ' + signupError.toString();
+              isLoading = false;
+            });
+          }
+        } else {
+          setState(() {
+            error = e.message ?? e.toString();
+            isLoading = false;
+          });
         }
       } catch (e) {
+        print('[LOGIN] Exception (non-FirebaseAuth): ' +
+            e.toString() +
+            ' type=' +
+            e.runtimeType.toString());
         setState(() {
           error = e.toString();
-        });
-      } finally {
-        setState(() {
           isLoading = false;
         });
       }

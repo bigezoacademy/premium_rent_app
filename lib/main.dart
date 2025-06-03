@@ -9,6 +9,7 @@ import 'pages/developer_dashboard.dart';
 import 'firebase_options.dart';
 import 'pages/tenant_dashboard.dart';
 import 'pages/tenant_entry.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -237,10 +238,20 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
     );
   }
 
+  // Add a back button to the AuthHomeScreen (if not already at root)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: null,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.maybePop(context),
+              )
+            : null,
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
@@ -289,6 +300,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                   ),
                   elevation: 0,
                 ),
+                onPressed: isLoading ? null : _handleGoogleAuth,
                 child: isLoading
                     ? SizedBox(
                         height: 28,
@@ -297,13 +309,100 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                       )
                     : Image.asset(
                         'assets/googlein.png',
-                        height: 40,
-                        width: 180,
+                        height: 100,
+                        width: 250,
                         fit: BoxFit.contain,
                       ),
-                onPressed: isLoading ? null : _handleGoogleAuth,
               ),
               SizedBox(height: 24),
+              // Add the public welcome card below the sign-in button
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      Text('Welcome to Premium Rent App!',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF3B6939))),
+                      SizedBox(height: 12),
+                      Text(
+                        'To create a Property Manager account, contact G-Realm Studio or view available property listings.',
+                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.business, color: Colors.white),
+                        label: Text('Contact G-Realm Studio'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF3B6939),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Contact G-Realm Studio'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('WhatsApp: +256773913902'),
+                                  SizedBox(height: 8),
+                                  Text('Email: admin@grealm.org'),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  child: Text('Close'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                                TextButton(
+                                  child: Text('Chat on WhatsApp'),
+                                  onPressed: () async {
+                                    final phoneUri =
+                                        Uri.parse('https://wa.me/256773913902');
+                                    await launchUrl(phoneUri,
+                                        mode: LaunchMode.externalApplication);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.home, color: Colors.white),
+                        label: Text('View Property Listings'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF8AC611),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => PropertyPublicListing()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 40),
             ],
           ),
         ),

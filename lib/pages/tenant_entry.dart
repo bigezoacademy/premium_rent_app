@@ -128,14 +128,33 @@ class NewUserLandingPage extends StatelessWidget {
   final String email = 'admin@grealm.org';
   const NewUserLandingPage({Key? key}) : super(key: key);
 
+  void _openWhatsApp(BuildContext context, String phone) async {
+    String cleanPhone = phone.trim();
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+256' + cleanPhone.substring(1);
+    }
+    cleanPhone = cleanPhone.replaceAll('+', '').replaceAll(' ', '');
+    final phoneUri = Uri.parse('https://wa.me/$cleanPhone');
+    await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
+    String displayWhatsapp = whatsapp;
+    if (displayWhatsapp.trim().startsWith('0')) {
+      displayWhatsapp = '+256' + displayWhatsapp.trim().substring(1);
+    }
     return Scaffold(
-      backgroundColor: Color(0xFFF6FBF4),
       appBar: AppBar(
         title: Text('Welcome'),
         backgroundColor: Color(0xFF8AC611),
         elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.maybePop(context),
+              )
+            : null,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -196,7 +215,7 @@ class NewUserLandingPage extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('WhatsApp: $whatsapp'),
+                            Text('WhatsApp: $displayWhatsapp'),
                             SizedBox(height: 8),
                             Text('Email: $email'),
                           ],
@@ -205,6 +224,11 @@ class NewUserLandingPage extends StatelessWidget {
                           TextButton(
                             child: Text('Close'),
                             onPressed: () => Navigator.pop(context),
+                          ),
+                          TextButton(
+                            child: Text('Chat on WhatsApp'),
+                            onPressed: () =>
+                                _openWhatsApp(context, displayWhatsapp),
                           ),
                         ],
                       ),
@@ -247,55 +271,140 @@ class PropertyPublicListing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('properties').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error loading properties'));
-        }
-        final properties = snapshot.data?.docs ?? [];
-        if (properties.isEmpty) {
-          return Center(child: Text('No properties available.'));
-        }
-        return ListView.builder(
-          itemCount: properties.length,
-          itemBuilder: (context, i) {
-            final prop = properties[i];
-            final data = prop.data() as Map<String, dynamic>;
-            final photos = (data['photos'] as List?) ?? [];
-            return Card(
-              margin: EdgeInsets.symmetric(vertical: 8),
-              child: ListTile(
-                leading: photos.isNotEmpty
-                    ? SizedBox(
-                        width: 64,
-                        height: 64,
-                        child: Image.network(photos[0], fit: BoxFit.cover),
-                      )
-                    : Icon(Icons.home, size: 48),
-                title: Text(data['name'] ?? 'Property'),
-                subtitle: Text(data['location'] ?? ''),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PropertyDetailsPage(
-                        propertyData: data,
-                        managerEmail: data['ownerEmail'] ?? '',
-                        managerPhone: data['ownerPhone'] ?? '',
-                        photos: photos,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Available Properties',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Color(0xFF8AC611),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Container(
+        color: Color(0xFFF6FBF4),
+        child: StreamBuilder<QuerySnapshot>(
+          stream:
+              FirebaseFirestore.instance.collection('properties').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error loading properties'));
+            }
+            final properties = snapshot.data?.docs ?? [];
+            if (properties.isEmpty) {
+              return Center(child: Text('No properties available.'));
+            }
+            return ListView.separated(
+              padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              itemCount: properties.length,
+              separatorBuilder: (context, i) => SizedBox(height: 24),
+              itemBuilder: (context, i) {
+                final prop = properties[i];
+                final data = prop.data() as Map<String, dynamic>;
+                final photos = (data['photos'] as List?) ?? [];
+                return InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PropertyDetailsPage(
+                          propertyData: data,
+                          managerEmail: data['ownerEmail'] ?? '',
+                          managerPhone: data['ownerPhone'] ?? '',
+                          photos: photos,
+                        ),
                       ),
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: photos.isNotEmpty
+                              ? Image.network(
+                                  photos[0],
+                                  width: 140,
+                                  height: 140,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: 140,
+                                  height: 140,
+                                  color: Color(0xFFE0E0E0),
+                                  child: Icon(Icons.home,
+                                      size: 60, color: Colors.grey[600]),
+                                ),
+                        ),
+                        SizedBox(width: 20),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data['name'] ?? 'Property',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF3B6939),
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  data['location'] ?? '',
+                                  style: TextStyle(
+                                      fontSize: 16, color: Colors.black87),
+                                ),
+                                if (data['amenities'] != null &&
+                                    data['amenities']
+                                        .toString()
+                                        .trim()
+                                        .isNotEmpty) ...[
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Amenities:',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF8AC611)),
+                                  ),
+                                  Text(
+                                    data['amenities'].toString(),
+                                    style: TextStyle(
+                                        fontSize: 15, color: Colors.black54),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -314,7 +423,12 @@ class PropertyDetailsPage extends StatelessWidget {
   }) : super(key: key);
 
   void _openWhatsApp(BuildContext context, String phone) async {
-    final cleanPhone = phone.replaceAll('+', '').replaceAll(' ', '');
+    // Ensure phone starts with +256 instead of 0
+    String cleanPhone = phone.trim();
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+256' + cleanPhone.substring(1);
+    }
+    cleanPhone = cleanPhone.replaceAll('+', '').replaceAll(' ', '');
     final phoneUri = Uri.parse('https://wa.me/$cleanPhone');
     await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
   }
@@ -418,8 +532,20 @@ class PropertyDetailsPage extends StatelessWidget {
         propertyData['manager_phone'] ??
         propertyData['ownerPhone'] ??
         '';
+    String displayWhatsapp = managerPhone;
+    if (displayWhatsapp.trim().startsWith('0')) {
+      displayWhatsapp = '+256' + displayWhatsapp.trim().substring(1);
+    }
     return Scaffold(
-      appBar: AppBar(title: Text(propertyData['name'] ?? 'Property Details')),
+      appBar: AppBar(
+        title: Text(propertyData['name'] ?? 'Property Details'),
+        backgroundColor: Color(0xFF8AC611),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: ListView(
         padding: EdgeInsets.all(16),
         children: [
@@ -462,7 +588,7 @@ class PropertyDetailsPage extends StatelessWidget {
           ),
           Row(
             children: [
-              Text('Phone: $managerPhone'),
+              Text('Phone: $displayWhatsapp'),
               SizedBox(width: 8),
               IconButton(
                 icon:
