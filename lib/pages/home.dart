@@ -28,7 +28,7 @@ class _HomeState extends State<Home> {
                   margin: EdgeInsets.only(
                       left: 20.0, top: 20.0, right: 20.0, bottom: 20.0),
                   child: SizedBox(
-                    width: 100,
+                    width: 200,
                     child: Image.asset('assets/bigezo.png'),
                   ),
                 ),

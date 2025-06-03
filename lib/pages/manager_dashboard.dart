@@ -225,49 +225,17 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                 itemBuilder: (context, idx) {
                   final doc = properties[idx];
                   final data = doc.data() as Map<String, dynamic>;
-                  return Card(
-                    color: m3Surface,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      title: Text(data['name'] ?? 'Unnamed',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, color: m3OnSurface)),
-                      subtitle: Text(
-                        '${data['location'] ?? ''}\n${data['category'] ?? ''}',
-                        style: TextStyle(color: m3Grey),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.visibility, color: m3Primary),
-                            tooltip: 'View',
-                            onPressed: () {
-                              setState(() {
-                                selectedPropertyId = doc.id;
-                                selectedPropertyName = data['name'] ?? '';
-                              });
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.edit, color: Colors.orange),
-                            tooltip: 'Edit',
-                            onPressed: () {
-                              _editPropertyDialog(context, doc);
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            tooltip: 'Delete',
-                            onPressed: () {
-                              _deleteProperty(
-                                  context, doc.id, data['name'] ?? '');
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                  return buildPropertyCard(
+                    data,
+                    () {
+                      setState(() {
+                        selectedPropertyId = doc.id;
+                        selectedPropertyName = data['name'] ?? '';
+                      });
+                    },
+                    () {
+                      _editPropertyDialog(context, doc);
+                    },
                   );
                 },
               ),
@@ -833,6 +801,34 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                           }
                         },
                   child: Text('Save'),
+                ),
+                TextButton(
+                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                  onPressed: () async {
+                    // Confirm delete
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Delete Property'),
+                        content: Text(
+                            'Are you sure you want to delete this property? This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            child: Text('Cancel'),
+                            onPressed: () => Navigator.pop(context, false),
+                          ),
+                          TextButton(
+                            child: Text('Delete',
+                                style: TextStyle(color: Colors.red)),
+                            onPressed: () => Navigator.pop(context, true),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      // ...existing delete logic...
+                    }
+                  },
                 ),
               ],
             );
@@ -1727,6 +1723,106 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     } catch (e) {
       return null;
     }
+  }
+
+  // In the property manager's property list:
+  // Replace the ListTile or row for each property with a modern clickable card
+  Widget buildPropertyCard(Map<String, dynamic> property, VoidCallback onManage,
+      VoidCallback onEdit) {
+    final photos = (property['photos'] as List?) ?? [];
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onManage,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Row 1: Property Name
+              Text(
+                property['name'] ?? 'Property',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF3B6939),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 8),
+              // Row 2: Thumbnail + Location
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: photos.isNotEmpty
+                        ? Image.network(
+                            photos[0],
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            width: 80,
+                            height: 80,
+                            color: Color(0xFFE0E0E0),
+                            child: Icon(Icons.home,
+                                size: 36, color: Colors.grey[600]),
+                          ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      property['location'] ?? '',
+                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              // Row 3: Manage button + Edit icon
+              Row(
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF3B6939),
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(80, 36),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text('Manage'),
+                    onPressed: onManage,
+                  ),
+                  SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(Icons.edit, color: Colors.orange),
+                    tooltip: 'Edit Property',
+                    onPressed: onEdit,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

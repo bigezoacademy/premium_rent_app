@@ -324,18 +324,23 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      Text('Welcome to Premium Rent App!',
-                          style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF3B6939))),
-                      SizedBox(height: 12),
                       Text(
-                        'To create a Property Manager account, contact G-Realm Studio or view available property listings.',
-                        style: TextStyle(fontSize: 16, color: Colors.black87),
+                        'Welcome to Premium Rent App!',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3B6939),
+                        ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 24),
+                      SizedBox(height: 12),
+                      // Property Manager info above the contact button
+                      Text(
+                        'Want to become a property manager? Please contact G-Realm Studio for more information.',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
                       ElevatedButton.icon(
                         icon: Icon(Icons.business, color: Colors.white),
                         label: Text('Contact G-Realm Studio'),
@@ -380,11 +385,18 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                         },
                       ),
                       SizedBox(height: 16),
+                      // Tenant info above the property listing button
+                      Text(
+                        'Looking to rent? Browse our available properties and become a tenant today!',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
                       ElevatedButton.icon(
                         icon: Icon(Icons.home, color: Colors.white),
                         label: Text('View Property Listings'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF8AC611),
+                          backgroundColor: Color.fromARGB(5, 65, 221, 75),
                           foregroundColor: Colors.white,
                           minimumSize: Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
