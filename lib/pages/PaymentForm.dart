@@ -301,7 +301,7 @@ class _PaymentFormState extends State<PaymentForm> {
           final message =
               "Dear $name, you have paid Ugx $amount -- $reason. Thank you - Premium Rent App";
 
-          await sendSMS.sendSms(message, formattedPhone);
+          await sendSMS.sendSms(phone: formattedPhone, msg: message);
         } catch (e) {
           print('Error: $e');
           _showErrorDialog(

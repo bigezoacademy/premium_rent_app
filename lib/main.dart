@@ -324,19 +324,10 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      Text(
-                        'Welcome to Premium Rent App!',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF3B6939),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
                       SizedBox(height: 12),
                       // Property Manager info above the contact button
                       Text(
-                        'Want to become a property manager? Please contact G-Realm Studio for more information.',
+                        'Want to become a property manager? Contact G-Realm Studio.',
                         style: TextStyle(fontSize: 14, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),

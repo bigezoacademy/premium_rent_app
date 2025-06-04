@@ -4,6 +4,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'SendSms.dart';
+// import 'package:send_sms/send_sms.dart';
+// import 'send_sms_page.dart';
 import '../../auth_service.dart';
 import '../../main.dart';
 
@@ -885,7 +890,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     return ListView(
       children: [
         Card(
-          color: Color(0xFFC65611), // brownish color
+          color: Colors.black, // Changed from brownish to black
           margin: EdgeInsets.only(bottom: 16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -894,9 +899,9 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               children: [
                 Text(propertyName,
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                        color: Colors.white)),
+                        color: Color(0xFF8AC611), // Light green
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
                 Text(subtitle,
                     style: TextStyle(fontSize: 16, color: Colors.white)),
@@ -956,7 +961,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
             Spacer(),
           ],
         ),
-        SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -1611,6 +1615,46 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                 ),
               ),
               actions: [
+                if (tenantId != null)
+                  TextButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Delete Tenant'),
+                                content: Text(
+                                    'Are you sure you want to delete this tenant?'),
+                                actions: [
+                                  TextButton(
+                                    child: Text('Cancel'),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              setState(() => isLoading = true);
+                              await FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(propertyId)
+                                  .collection('tenants')
+                                  .doc(tenantId)
+                                  .delete();
+                              Navigator.pop(context); // Close edit dialog
+                            }
+                          },
+                    child: Text('Delete', style: TextStyle(color: Colors.red)),
+                  ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text('Cancel'),
@@ -1715,112 +1759,44 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     );
   }
 
-  // Helper to get selected property from cache
   Map<String, dynamic>? _getSelectedProperty() {
     if (selectedPropertyId == null) return null;
-    try {
-      return _propertyCache.firstWhere((p) => p['id'] == selectedPropertyId);
-    } catch (e) {
-      return null;
-    }
+    final property = _propertyCache.firstWhere(
+      (prop) => prop['id'] == selectedPropertyId,
+      orElse: () => {},
+    );
+    return property.isEmpty ? null : property;
   }
 
-  // In the property manager's property list:
-  // Replace the ListTile or row for each property with a modern clickable card
-  Widget buildPropertyCard(Map<String, dynamic> property, VoidCallback onManage,
-      VoidCallback onEdit) {
-    final photos = (property['photos'] as List?) ?? [];
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onManage,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 12,
-              offset: Offset(0, 4),
+  Widget buildPropertyCard(
+    Map<String, dynamic> data,
+    VoidCallback onTap,
+    VoidCallback onEdit,
+  ) {
+    return Card(
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        title: Text(data['name'] ?? '',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(data['location'] ?? ''),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.orange),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
+            IconButton(
+              icon: Icon(Icons.arrow_forward_ios, color: m3Primary),
+              onPressed: onTap,
+              tooltip: 'Select',
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Row 1: Property Name
-              Text(
-                property['name'] ?? 'Property',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3B6939),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: 8),
-              // Row 2: Thumbnail + Location
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: photos.isNotEmpty
-                        ? Image.network(
-                            photos[0],
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            width: 80,
-                            height: 80,
-                            color: Color(0xFFE0E0E0),
-                            child: Icon(Icons.home,
-                                size: 36, color: Colors.grey[600]),
-                          ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      property['location'] ?? '',
-                      style: TextStyle(fontSize: 16, color: Colors.black87),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              // Row 3: Manage button + Edit icon
-              Row(
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3B6939),
-                      foregroundColor: Colors.white,
-                      minimumSize: Size(80, 36),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: Text('Manage'),
-                    onPressed: onManage,
-                  ),
-                  SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.edit, color: Colors.orange),
-                    tooltip: 'Edit Property',
-                    onPressed: onEdit,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        onTap: onTap,
       ),
     );
   }
@@ -1843,100 +1819,25 @@ class TenantDatabasePage extends StatefulWidget {
 class _TenantDatabasePageState extends State<TenantDatabasePage> {
   String searchQuery = '';
 
-  // Remove findAncestorStateOfType logic for add tenant
-  Future<void> _showAddOrEditTenantDialog(
-      {Map<String, dynamic>? tenantDoc, String? tenantId}) async {
-    if (tenantDoc == null && tenantId == null && widget.onAddTenant != null) {
-      await widget.onAddTenant!();
-      return;
-    }
-    // ...existing code for edit (if needed)...
-    final state = context.findAncestorStateOfType<_ManagerDashboardState>();
-    if (state != null) {
-      await state._addTenantDialog(
-        context,
-        widget.propertyId,
-        tenantDoc: tenantDoc,
-        tenantId: tenantId,
-        propertyName: widget.propertyName,
-      );
-    } else {
-      // fallback: show a dialog or snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Edit not available in this context.')),
-      );
-    }
-  }
-
-  void _showTenantDetailsDialogLocal(Map<String, dynamic> data) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Tenant Details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: ${data['name'] ?? ''}'),
-            Text('Phone: ${data['phone'] ?? ''}'),
-            Text('Email: ${data['email'] ?? ''}'),
-            Text('Gender: ${data['gender'] ?? ''}'),
-            Text('Age: ${data['age']?.toString() ?? ''}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-              child: Text('Close'), onPressed: () => Navigator.pop(context)),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Tenants - ${widget.propertyName}'),
-        backgroundColor: m3Primary,
-        foregroundColor: m3OnPrimary,
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Add Tenant button row
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  icon: Icon(Icons.person_add),
-                  label: Text('Add Tenant'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: m3Primary,
-                    foregroundColor: m3OnPrimary,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    if (widget.onAddTenant != null) {
-                      widget.onAddTenant!();
-                    } else {
-                      _showAddOrEditTenantDialog();
-                    }
-                  },
-                ),
-                Spacer(),
-              ],
-            ),
-            SizedBox(height: 12),
-            // Search field row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Search tenants by name, phone, or email',
+                      hintText: 'Search by name, email or phone',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8)),
@@ -1947,9 +1848,36 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                         setState(() => searchQuery = val.trim().toLowerCase()),
                   ),
                 ),
+                SizedBox(width: 12),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.person_add),
+                  label: Text('Add'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => _showAddOrEditTenantDialog(),
+                ),
               ],
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 8),
+            // Tenant count row
+            FutureBuilder<QuerySnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('properties')
+                  .doc(widget.propertyId)
+                  .collection('tenants')
+                  .get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return SizedBox();
+                final total = snapshot.data!.docs.length;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+                  child: Text('Total tenants: $total',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                );
+              },
+            ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -1969,99 +1897,79 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                     final data = t.data() as Map<String, dynamic>;
                     if (searchQuery.isEmpty) return true;
                     final name = (data['name'] ?? '').toString().toLowerCase();
-                    final phone =
-                        (data['phone'] ?? '').toString().toLowerCase();
                     final email =
                         (data['email'] ?? '').toString().toLowerCase();
+                    final phone =
+                        (data['phone'] ?? '').toString().toLowerCase();
                     return name.contains(searchQuery) ||
-                        phone.contains(searchQuery) ||
-                        email.contains(searchQuery);
+                        email.contains(searchQuery) ||
+                        phone.contains(searchQuery);
                   }).toList();
                   if (filtered.isEmpty) {
                     return Center(child: Text('No tenants found.'));
                   }
                   return ListView.separated(
                     itemCount: filtered.length,
-                    separatorBuilder: (context, i) => Divider(),
-                    itemBuilder: (context, i) {
-                      final t = filtered[i];
-                      final data = t.data() as Map<String, dynamic>;
-                      final facility = (data['facilityNumber'] != null &&
-                              data['facilityNumber'].toString().isNotEmpty)
-                          ? 'Facility/Room: ${data['facilityNumber']}'
-                          : '';
-                      return ListTile(
-                        leading: CircleAvatar(child: Icon(Icons.person)),
-                        title: Text(data['name'] ?? ''),
-                        subtitle: Text([facility, data['phone'] ?? '']
-                            .where((s) =>
-                                s != null && s.toString().trim().isNotEmpty)
-                            .join(' | ')),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.edit, color: Color(0xFF8AC611)),
-                              tooltip: 'Edit Tenant',
-                              onPressed: () async {
-                                final state = context.findAncestorStateOfType<
-                                    _ManagerDashboardState>();
-                                if (state != null) {
-                                  await state._addTenantDialog(
+                    separatorBuilder: (_, __) => SizedBox(height: 8),
+                    itemBuilder: (context, idx) {
+                      final doc = filtered[idx];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final phone = data['phone'] ?? '';
+                      // Format phone for WhatsApp (Uganda)
+                      String waPhone = phone.toString().trim();
+                      if (waPhone.startsWith('0')) {
+                        waPhone = '+256' + waPhone.substring(1);
+                      }
+                      if (!waPhone.startsWith('+256')) {
+                        waPhone =
+                            '+256' + waPhone.replaceAll(RegExp(r'^\+?'), '');
+                      }
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(Icons.person, color: Colors.green),
+                          title: Text(data['name'] ?? '',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(
+                              '${data['email'] ?? ''}\n${data['phone'] ?? ''}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.sms_outlined,
+                                    color: Colors.blue),
+                                tooltip: 'SMS',
+                                onPressed: () {
+                                  Navigator.push(
                                     context,
-                                    widget
-                                        .propertyId, // Use propertyId from widget
-                                    tenantDoc: data,
-                                    tenantId: t.id,
-                                    propertyName: widget.propertyName,
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(
-                                            'Edit not available in this context.')),
-                                  );
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
-                              tooltip: 'Delete Tenant',
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: Text('Delete Tenant'),
-                                    content: Text(
-                                        'Are you sure you want to delete this tenant?'),
-                                    actions: [
-                                      TextButton(
-                                          child: Text('Cancel'),
-                                          onPressed: () =>
-                                              Navigator.pop(context, false)),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red),
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: Text('Delete'),
+                                    MaterialPageRoute(
+                                      builder: (context) => SendSmsPage(
+                                        phone: phone,
                                       ),
-                                    ],
-                                  ),
-                                );
-                                if (confirm == true) {
-                                  await FirebaseFirestore.instance
-                                      .collection('properties')
-                                      .doc(widget.propertyId)
-                                      .collection('tenants')
-                                      .doc(t.id)
-                                      .delete();
-                                }
-                              },
-                            ),
-                          ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: FaIcon(FontAwesomeIcons.whatsapp,
+                                    color: Colors.green),
+                                tooltip: 'WhatsApp',
+                                onPressed: () async {
+                                  final waUri = Uri.parse(
+                                      'https://wa.me/${waPhone.replaceAll('+', '')}');
+                                  await launchUrl(waUri);
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.orange),
+                                tooltip: 'Edit',
+                                onPressed: () => _showAddOrEditTenantDialog(
+                                  tenantDoc: data,
+                                  tenantId: doc.id,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        onTap: () => _showTenantDetailsDialogLocal(data),
                       );
                     },
                   );
@@ -2071,6 +1979,232 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showAddOrEditTenantDialog(
+      {Map<String, dynamic>? tenantDoc, String? tenantId}) async {
+    final _formKey = GlobalKey<FormState>();
+    TextEditingController nameController =
+        TextEditingController(text: tenantDoc?['name'] ?? '');
+    TextEditingController phoneController =
+        TextEditingController(text: tenantDoc?['phone'] ?? '');
+    TextEditingController emailController =
+        TextEditingController(text: tenantDoc?['email'] ?? '');
+    TextEditingController ageController =
+        TextEditingController(text: tenantDoc?['age']?.toString() ?? '');
+    String? gender = tenantDoc?['gender'] ?? null;
+    bool isLoading = false;
+    String? errorMsg;
+    // Fetch facilities for this property
+    final facilitiesSnap = await FirebaseFirestore.instance
+        .collection('properties')
+        .doc(widget.propertyId)
+        .collection('facilities')
+        .get();
+    final facilities = facilitiesSnap.docs
+        .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+        .toList();
+    List<DropdownMenuItem<String>> facilityItems = facilities.map((f) {
+      final rent = f['rent'];
+      String formattedRent = '';
+      if (rent != null) {
+        try {
+          final num rentNum = num.parse(rent.toString());
+          formattedRent = rentNum.toStringAsFixed(0).replaceAllMapped(
+                RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                (match) => ',',
+              );
+        } catch (_) {
+          formattedRent = rent.toString();
+        }
+      }
+      return DropdownMenuItem<String>(
+        value: f['id'],
+        child: Text('${f['number']} - UGX $formattedRent'),
+      );
+    }).toList();
+    String? selectedFacilityId = tenantDoc?['facilityId'];
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(tenantId == null ? 'Add Tenant' : 'Edit Tenant'),
+              content: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: InputDecoration(hintText: 'Name'),
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: InputDecoration(hintText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: phoneController,
+                        decoration: InputDecoration(hintText: 'Phone'),
+                        keyboardType: TextInputType.phone,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: ageController,
+                        decoration: InputDecoration(hintText: 'Age'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: gender,
+                        decoration: InputDecoration(hintText: 'Gender'),
+                        items: [
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(
+                              value: 'Female', child: Text('Female')),
+                        ],
+                        onChanged: (val) => setState(() => gender = val),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedFacilityId,
+                        decoration: InputDecoration(labelText: 'Facility/Room'),
+                        items: facilityItems,
+                        onChanged: (val) =>
+                            setState(() => selectedFacilityId = val),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
+                      ),
+                      SizedBox(height: 8),
+                      if (errorMsg != null) ...[
+                        SizedBox(height: 8),
+                        Text(errorMsg!, style: TextStyle(color: Colors.red)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                if (tenantId != null)
+                  TextButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Delete Tenant'),
+                                content: Text(
+                                    'Are you sure you want to delete this tenant?'),
+                                actions: [
+                                  TextButton(
+                                    child: Text('Cancel'),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true) {
+                              setState(() => isLoading = true);
+                              await FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(widget.propertyId)
+                                  .collection('tenants')
+                                  .doc(tenantId)
+                                  .delete();
+                              Navigator.pop(context); // Close edit dialog
+                            }
+                          },
+                    child: Text('Delete', style: TextStyle(color: Colors.red)),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: m3Primary,
+                    foregroundColor: m3OnPrimary,
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setState(() => isLoading = true);
+                            try {
+                              final selectedFacility = facilities.firstWhere(
+                                  (f) => f['id'] == selectedFacilityId);
+                              final tenantData = {
+                                'name': nameController.text.trim(),
+                                'displayName': nameController.text.trim(),
+                                'email':
+                                    emailController.text.trim().toLowerCase(),
+                                'phone': phoneController.text.trim(),
+                                'age': int.tryParse(ageController.text.trim()),
+                                'gender': gender,
+                                'role': 'tenant',
+                                'createdAt': FieldValue.serverTimestamp(),
+                                'propertyId': widget.propertyId,
+                                'propertyName': widget.propertyName,
+                                'facilityId': selectedFacilityId,
+                                'facilityNumber': selectedFacility['number'],
+                                'facilityRent': selectedFacility['rent'],
+                              };
+                              final tenantsRef = FirebaseFirestore.instance
+                                  .collection('properties')
+                                  .doc(widget.propertyId)
+                                  .collection('tenants');
+                              if (tenantId == null) {
+                                await tenantsRef.add(tenantData);
+                              } else {
+                                await tenantsRef
+                                    .doc(tenantId)
+                                    .update(tenantData);
+                              }
+                              Navigator.pop(context);
+                            } catch (e) {
+                              setState(() {
+                                isLoading = false;
+                                errorMsg = 'Failed to save tenant: $e';
+                              });
+                            }
+                          }
+                        },
+                  child: isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text(tenantId == null ? 'Add' : 'Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -2342,18 +2476,15 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                         (data['number'] ?? '').toString().toLowerCase();
                     return number.contains(searchQuery);
                   }).toList();
-                  if (filtered.isEmpty) {
-                    return Center(child: Text('No facilities found.'));
-                  }
-                  return ListView.separated(
+
+                  return ListView.builder(
                     itemCount: filtered.length,
-                    separatorBuilder: (context, i) => Divider(),
-                    itemBuilder: (context, i) {
-                      final f = filtered[i];
+                    itemBuilder: (context, index) {
+                      final f = filtered[index];
                       final data = f.data() as Map<String, dynamic>;
                       return ListTile(
                         leading: Icon(Icons.meeting_room, color: m3Primary),
-                        title: Text('Room ${data['number'] ?? ''}'),
+                        title: Text('Room ${data['number'] ?? ''}'),
                         subtitle: Text('Rent: UGX ${data['rent'] ?? ''}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2408,6 +2539,126 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Add SendSmsPage widget at the bottom of the file
+class SendSmsPage extends StatefulWidget {
+  final String phone;
+  final String? tenantName;
+  const SendSmsPage({Key? key, required this.phone, this.tenantName})
+      : super(key: key);
+  @override
+  State<SendSmsPage> createState() => _SendSmsPageState();
+}
+
+class _SendSmsPageState extends State<SendSmsPage> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _messageController = TextEditingController();
+  bool _isSending = false;
+  String? _error;
+
+  String get formattedPhone {
+    String phone = widget.phone.trim();
+    if (phone.startsWith('0')) {
+      phone = '256' + phone.substring(1);
+    } else if (phone.startsWith('+256')) {
+      phone = phone.substring(1);
+    }
+    return phone;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Send SMS'),
+        backgroundColor: m3Primary,
+        foregroundColor: m3OnPrimary,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.tenantName != null &&
+                  widget.tenantName!.isNotEmpty) ...[
+                Text(widget.tenantName!,
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                SizedBox(height: 2),
+              ],
+              Text('To:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 4),
+              Text(formattedPhone, style: TextStyle(fontSize: 16)),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _messageController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: 'Message',
+                  filled: true,
+                  fillColor: Color(0xFFF5F5F5), // very faint grey
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Enter a message' : null,
+              ),
+              SizedBox(height: 24),
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: Colors.red)),
+                SizedBox(height: 12),
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: m3Primary,
+                    foregroundColor: m3OnPrimary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4)),
+                  ),
+                  onPressed: _isSending
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate()) {
+                            setState(() {
+                              _isSending = true;
+                              _error = null;
+                            });
+                            try {
+                              await SendSMS().sendSms(
+                                phone: formattedPhone,
+                                msg: _messageController.text.trim(),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('SMS sent!')),
+                              );
+                              Navigator.pop(context);
+                            } catch (e) {
+                              setState(() {
+                                _error = 'Failed to send SMS: ' + e.toString();
+                                _isSending = false;
+                              });
+                            }
+                          }
+                        },
+                  child: _isSending
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Text('Send'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

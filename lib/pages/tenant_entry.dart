@@ -240,23 +240,29 @@ class NewUserLandingPage extends StatelessWidget {
                 Text('Or',
                     style: TextStyle(fontSize: 16, color: Colors.black54)),
                 SizedBox(height: 16),
-                ElevatedButton.icon(
-                  icon: Icon(Icons.home, color: Colors.white),
-                  label: Text('View Property Listings'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF8AC611),
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                ElevatedButtonTheme(
+                  data: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(double.infinity, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PropertyPublicListing()),
-                    );
-                  },
+                  child: ElevatedButton.icon(
+                    icon: Icon(Icons.home, color: Colors.white),
+                    label: Text('View Property Listings'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => PropertyPublicListing()),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -307,7 +313,6 @@ class PropertyPublicListing extends StatelessWidget {
                 final prop = properties[i];
                 final data = prop.data() as Map<String, dynamic>;
                 final photos = (data['photos'] as List?) ?? [];
-                final rent = data['rent'] ?? data['price'] ?? '';
                 return InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () {
@@ -316,6 +321,7 @@ class PropertyPublicListing extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => PropertyDetailsPage(
                           propertyData: data,
+                          propertyId: prop.id, // <-- pass the Firestore doc ID
                           managerEmail: data['ownerEmail'] ?? '',
                           managerPhone: data['ownerPhone'] ?? '',
                           photos: photos,
@@ -376,10 +382,10 @@ class PropertyPublicListing extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 16, color: Colors.black87),
                                 ),
-                                if (rent.toString().isNotEmpty) ...[
+                                if (data['rent'] != null) ...[
                                   SizedBox(height: 8),
                                   Text(
-                                    'Rent: UGX ${formatAmount(rent)}',
+                                    'Rent: UGX ${formatAmount(data['rent'])}',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
@@ -424,11 +430,13 @@ class PropertyPublicListing extends StatelessWidget {
 
 class PropertyDetailsPage extends StatefulWidget {
   final Map<String, dynamic> propertyData;
+  final String propertyId;
   final String managerEmail;
   final String managerPhone;
   final List photos;
   const PropertyDetailsPage({
     required this.propertyData,
+    required this.propertyId,
     required this.managerEmail,
     required this.managerPhone,
     required this.photos,
@@ -440,6 +448,43 @@ class PropertyDetailsPage extends StatefulWidget {
 }
 
 class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
+  List<Map<String, dynamic>> _facilities = [];
+  bool _loadingFacilities = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFacilities();
+  }
+
+  Future<void> _fetchFacilities() async {
+    try {
+      final propertyId = widget.propertyId;
+      if (propertyId.isEmpty) {
+        setState(() {
+          _facilities = [];
+          _loadingFacilities = false;
+        });
+        return;
+      }
+      final facilitiesSnapshot = await FirebaseFirestore.instance
+          .collection('properties')
+          .doc(propertyId)
+          .collection('facilities')
+          .get();
+      setState(() {
+        _facilities = facilitiesSnapshot.docs.map((doc) => doc.data()).toList();
+        _loadingFacilities = false;
+      });
+    } catch (e) {
+      print('Error fetching facilities: $e');
+      setState(() {
+        _facilities = [];
+        _loadingFacilities = false;
+      });
+    }
+  }
+
   void _showFacilityDetails(Map<String, dynamic> facility) {
     showDialog(
       context: context,
@@ -449,7 +494,11 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: facility.entries
-                .where((entry) => entry.key != 'name' && entry.key != 'rent')
+                .where((entry) =>
+                    entry.key != 'name' &&
+                    entry.key != 'rent' &&
+                    entry.key != 'createdAt' &&
+                    entry.key != 'propertyId')
                 .map((entry) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -485,7 +534,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final propertyData = widget.propertyData;
-    final facilities = (propertyData['facilities'] as List?) ?? [];
     final managerName = propertyData['managerName'] ??
         propertyData['manager'] ??
         propertyData['ownerName'] ??
@@ -502,10 +550,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     if (displayWhatsapp.trim().startsWith('0')) {
       displayWhatsapp = '+256' + displayWhatsapp.trim().substring(1);
     }
-    final rent = propertyData['rent'] ?? propertyData['price'] ?? '';
     return Scaffold(
       appBar: AppBar(
-        title: Text(propertyData['name'] ?? 'Property Details'),
+        title: Text(propertyData['name'] ?? 'Property Details',
+            style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF8AC611),
         elevation: 0,
         leading: IconButton(
@@ -589,8 +637,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               ],
             ),
           SizedBox(height: 24),
-          // Always show facilities table, even if empty (show message if none)
-          if (facilities.isNotEmpty) ...[
+          // Facilities section
+          if (_loadingFacilities)
+            Center(child: CircularProgressIndicator())
+          else if (_facilities.isNotEmpty) ...[
             Text('Facilities:',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             SizedBox(height: 12),
@@ -618,7 +668,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                     ),
                   ],
                 ),
-                ...facilities.map((facility) {
+                ..._facilities.map((facility) {
                   return TableRow(
                     children: [
                       Padding(
@@ -669,8 +719,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           ] else ...[
             Builder(
               builder: (context) {
-                print(
-                    'No facilities/rooms listed for this property.'); // Debug message for console
+                print('No facilities/rooms listed for this property.');
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -682,7 +731,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               },
             ),
           ],
-          // ...existing code for manager contact, etc...
         ],
       ),
     );
