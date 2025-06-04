@@ -13,17 +13,18 @@ import '../../auth_service.dart';
 import '../../main.dart';
 
 // Custom Material 3 color palette with #3b6939 as main color
-const Color m3Primary = Color(0xFF3B6939); // Main green
+const Color m3Primary = Color.fromARGB(255, 34, 157, 30); // Main green
 const Color m3OnPrimary = Color(0xFFFFFFFF); // On Primary
 const Color m3Secondary =
-    Color.fromARGB(255, 80, 255, 129); // Harmonized green secondary
+    Color.fromARGB(255, 94, 94, 94); // Harmonized green secondary
 const Color m3OnSecondary = Color(0xFFFFFFFF); // On Secondary
 const Color m3Background = Color(0xFFF6FBF4); // Light green-tinted background
 const Color m3Surface = Color(0xFFF6FBF4); // Surface
 const Color m3OnSurface = Color(0xFF1C1B1F); // On Surface
 const Color m3Error = Color(0xFFB3261E); // Error
 const Color m3OnError = Color(0xFFFFFFFF); // On Error
-const Color m3Outline = Color(0xFFB5C9B8); // Muted green outline
+const Color m3Outline =
+    Color.fromARGB(255, 205, 160, 64); // Muted green outline
 const Color m3Grey = Color.fromARGB(255, 75, 75, 75); // Shadow color
 
 class ManagerDashboard extends StatefulWidget {
