@@ -2485,7 +2485,7 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                       final data = f.data() as Map<String, dynamic>;
                       return ListTile(
                         leading: Icon(Icons.meeting_room, color: m3Primary),
-                        title: Text('Room ${data['number'] ?? ''}'),
+                        title: Text('Room ${data['number'] ?? ''}'),
                         subtitle: Text('Rent: UGX ${data['rent'] ?? ''}'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
