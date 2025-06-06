@@ -1822,8 +1822,8 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
         TextEditingController(text: facilityDoc?['bedrooms']?.toString() ?? '');
     TextEditingController bathroomsController = TextEditingController(
         text: facilityDoc?['bathrooms']?.toString() ?? '');
-    TextEditingController kitchenDescController =
-        TextEditingController(text: facilityDoc?['kitchenDesc'] ?? '');
+    TextEditingController descriptionController =
+        TextEditingController(text: facilityDoc?['description'] ?? '');
     String? facilityType = facilityDoc?['type'];
     bool isLoading = false;
 
@@ -1883,12 +1883,6 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                           keyboardType: TextInputType.number,
                         ),
                         SizedBox(height: 8),
-                        TextFormField(
-                          controller: kitchenDescController,
-                          decoration: InputDecoration(
-                            labelText: 'More features',
-                          ),
-                        ),
                       ],
                       if (propertyType == 'Shop Rentals' ||
                           propertyType == 'Mall Commercial Spaces') ...[
@@ -1913,6 +1907,14 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                         ),
                         SizedBox(height: 8),
                       ],
+                      // Description field for all property types
+                      TextFormField(
+                        controller: descriptionController,
+                        decoration: InputDecoration(
+                          labelText: 'Other Details',
+                        ),
+                        maxLines: 2,
+                      ),
                     ],
                   ),
                 ),
@@ -1940,6 +1942,8 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                                         0,
                                 'propertyId': widget.propertyId,
                                 'createdAt': FieldValue.serverTimestamp(),
+                                'description':
+                                    descriptionController.text.trim(),
                                 if (propertyType == 'Residential Rentals' ||
                                     propertyType ==
                                         'Residential Apartments') ...{
@@ -1949,8 +1953,6 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                                   'bathrooms': int.tryParse(
                                           bathroomsController.text.trim()) ??
                                       0,
-                                  'kitchenDesc':
-                                      kitchenDescController.text.trim(),
                                 },
                                 if (propertyType == 'Shop Rentals' ||
                                     propertyType ==

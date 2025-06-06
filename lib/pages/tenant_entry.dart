@@ -76,7 +76,7 @@ class _TenantPropertySelectorState extends State<TenantPropertySelector> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text('Error: \\$_error'));
+    if (_error != null) return Center(child: Text('Error: $_error'));
     if (_properties.isEmpty) {
       return Center(
         child: Column(
@@ -524,11 +524,22 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     );
   }
 
-  void _showEmailDialog(BuildContext context, String email) {
-    // ...existing code for email dialog...
+  void _showEmailDialog(BuildContext context, String email) async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    await launchUrl(emailLaunchUri);
   }
-  void _openWhatsApp(BuildContext context, String phone) {
-    // ...existing code for WhatsApp...
+
+  void _openWhatsApp(BuildContext context, String phone) async {
+    String cleanPhone = phone.trim();
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+256' + cleanPhone.substring(1);
+    }
+    cleanPhone = cleanPhone.replaceAll('+', '').replaceAll(' ', '');
+    final phoneUri = Uri.parse('https://wa.me/$cleanPhone');
+    await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -637,100 +648,126 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
               ],
             ),
           SizedBox(height: 24),
-          // Facilities section
+          // Facilities section (only unoccupied)
           if (_loadingFacilities)
             Center(child: CircularProgressIndicator())
-          else if (_facilities.isNotEmpty) ...[
-            Text('Facilities:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            SizedBox(height: 12),
-            Table(
-              columnWidths: {
-                0: FlexColumnWidth(2),
-                1: FlexColumnWidth(1),
-              },
-              border: TableBorder.all(color: Colors.grey[300]!),
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(color: Color(0xFFF6FBF4)),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Facility/Room',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text('Rent',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
-                    ),
-                  ],
-                ),
-                ..._facilities.map((facility) {
-                  return TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Text(
-                              facility['name'] ?? 'Facility',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            SizedBox(width: 8),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF8AC611),
-                                foregroundColor: Colors.white,
-                                minimumSize: Size(60, 32),
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 0),
-                                textStyle: TextStyle(fontSize: 13),
-                              ),
-                              child: Text('Details'),
-                              onPressed: () => _showFacilityDetails(facility),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          facility['rent'] != null
-                              ? 'UGX ' +
-                                  NumberFormat('#,##0').format(facility['rent'])
-                              : '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.brown[800],
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ],
-            ),
-            SizedBox(height: 24),
-          ] else ...[
-            Builder(
-              builder: (context) {
-                print('No facilities/rooms listed for this property.');
+          else
+            (() {
+              // Filter only unoccupied facilities
+              final unoccupied = _facilities.where((facility) {
+                // Consider unoccupied if 'occupied' is false or null, or 'tenant' is null/empty
+                final occupied = facility['occupied'];
+                final tenant = facility['tenant'];
+                return (occupied == null || occupied == false) &&
+                    (tenant == null ||
+                        (tenant is String && tenant.trim().isEmpty));
+              }).toList();
+
+              if (unoccupied.isNotEmpty) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('No facilities/rooms listed for this property.',
-                        style: TextStyle(color: Colors.grey)),
+                    Text('Un-occupied Facilities:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18)),
+                    SizedBox(height: 12),
+                    Table(
+                      columnWidths: {
+                        0: FlexColumnWidth(2),
+                        1: FlexColumnWidth(1),
+                      },
+                      border: TableBorder.all(color: Colors.grey[300]!),
+                      children: [
+                        TableRow(
+                          decoration: BoxDecoration(color: Color(0xFFF6FBF4)),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text('Facility/Room',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text('Rent',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                          ],
+                        ),
+                        ...unoccupied.map((facility) {
+                          return TableRow(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      facility['name'] ?? 'Facility',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15),
+                                    ),
+                                    SizedBox(width: 8),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Color(0xFF8AC611),
+                                        foregroundColor: Colors.white,
+                                        minimumSize: Size(60, 32),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 0),
+                                        textStyle: TextStyle(fontSize: 13),
+                                      ),
+                                      child: Text('Details'),
+                                      onPressed: () =>
+                                          _showFacilityDetails(facility),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  facility['rent'] != null
+                                      ? 'UGX ' +
+                                          NumberFormat('#,##0')
+                                              .format(facility['rent'])
+                                      : '',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.brown[800],
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ],
+                    ),
                     SizedBox(height: 24),
                   ],
                 );
-              },
-            ),
-          ],
+              } else {
+                return Builder(
+                  builder: (context) {
+                    print(
+                        'No unoccupied facilities/rooms listed for this property.');
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            'No unoccupied facilities/rooms listed for this property.',
+                            style: TextStyle(color: Colors.grey)),
+                        SizedBox(height: 24),
+                      ],
+                    );
+                  },
+                );
+              }
+            })(),
         ],
       ),
     );
