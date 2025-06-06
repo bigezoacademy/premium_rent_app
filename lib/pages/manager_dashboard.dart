@@ -7,8 +7,6 @@ import 'package:mailer/smtp_server.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'SendSms.dart';
-// import 'package:send_sms/send_sms.dart';
-// import 'send_sms_page.dart';
 import '../../auth_service.dart';
 import '../../main.dart';
 
@@ -1521,7 +1519,25 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     final facilities = facilitiesSnap.docs
         .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
         .toList();
-    List<DropdownMenuItem<String>> facilityItems = facilities.map((f) {
+
+    // Fetch tenants for this property to determine occupied facilities
+    final tenantsSnap = await FirebaseFirestore.instance
+        .collection('properties')
+        .doc(propertyId)
+        .collection('tenants')
+        .get();
+    final occupiedFacilityIds = tenantsSnap.docs
+        .map((doc) => doc['facilityId'] as String?)
+        .where((id) => id != null)
+        .toSet();
+
+    // Only show unoccupied facilities in the dropdown
+    final unoccupiedFacilities = facilities
+        .where((f) => !occupiedFacilityIds.contains(f['id']))
+        .toList();
+
+    List<DropdownMenuItem<String>> facilityItems =
+        unoccupiedFacilities.map((f) {
       final rent = f['rent'];
       String formattedRent = '';
       if (rent != null) {
@@ -1760,24 +1776,21 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     );
   }
 
+  // Returns the selected property from the local cache
   Map<String, dynamic>? _getSelectedProperty() {
     if (selectedPropertyId == null) return null;
-    final property = _propertyCache.firstWhere(
-      (prop) => prop['id'] == selectedPropertyId,
-      orElse: () => {},
+    return _propertyCache.firstWhere(
+      (p) => p['id'] == selectedPropertyId,
+      orElse: () => <String, dynamic>{},
     );
-    return property.isEmpty ? null : property;
   }
 
+  // Helper widget for property card in property selection step
   Widget buildPropertyCard(
-    Map<String, dynamic> data,
-    VoidCallback onTap,
-    VoidCallback onEdit,
-  ) {
+      Map<String, dynamic> data, VoidCallback onTap, VoidCallback onEdit) {
     return Card(
-      color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         title: Text(data['name'] ?? '',
             style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1786,477 +1799,19 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(Icons.edit, color: Colors.orange),
+              icon: Icon(Icons.edit, color: m3Primary),
               onPressed: onEdit,
-              tooltip: 'Edit',
+              tooltip: 'Edit Property',
             ),
             IconButton(
-              icon: Icon(Icons.arrow_forward_ios, color: m3Primary),
+              icon: Icon(Icons.arrow_forward_ios, color: m3Secondary),
               onPressed: onTap,
-              tooltip: 'Select',
+              tooltip: 'Select Property',
             ),
           ],
         ),
         onTap: onTap,
-      ), // <-- FIX: close ListTile
-    ); // <-- FIX: close Card
-  }
-}
-
-class TenantDatabasePage extends StatefulWidget {
-  final String propertyId;
-  final String propertyName;
-  final Future<void> Function()? onAddTenant;
-  const TenantDatabasePage({
-    Key? key,
-    required this.propertyId,
-    required this.propertyName,
-    this.onAddTenant,
-  }) : super(key: key);
-  @override
-  State<TenantDatabasePage> createState() => _TenantDatabasePageState();
-}
-
-class _TenantDatabasePageState extends State<TenantDatabasePage> {
-  String searchQuery = '';
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Tenants - ${widget.propertyName}'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 12),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  icon: Icon(Icons.person_add),
-                  label: Text('Add'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => _showAddOrEditTenantDialog(),
-                ),
-                Spacer(),
-              ],
-            ),
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: const Color.fromARGB(255, 0, 21, 106),
-                          width: 2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search by name, email or phone',
-                        prefixIcon: Icon(Icons.search),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                      ),
-                      onChanged: (val) => setState(
-                          () => searchQuery = val.trim().toLowerCase()),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 8),
-            // Tenant count row
-            FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('properties')
-                  .doc(widget.propertyId)
-                  .collection('tenants')
-                  .get(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return SizedBox();
-                final total = snapshot.data!.docs.length;
-                return Padding(
-                  padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFbce5ff),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Total tenants: ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.normal,
-                            fontSize: 24,
-                          ),
-                        ),
-                        Text(
-                          '$total',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF023994),
-                            fontSize: 24,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('properties')
-                    .doc(widget.propertyId)
-                    .collection('tenants')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error loading tenants'));
-                  }
-                  final tenants = snapshot.data?.docs ?? [];
-                  final filtered = tenants.where((t) {
-                    final data = t.data() as Map<String, dynamic>;
-                    if (searchQuery.isEmpty) return true;
-                    final name = (data['name'] ?? '').toString().toLowerCase();
-                    final email =
-                        (data['email'] ?? '').toString().toLowerCase();
-                    final phone =
-                        (data['phone'] ?? '').toString().toLowerCase();
-                    return name.contains(searchQuery) ||
-                        email.contains(searchQuery) ||
-                        phone.contains(searchQuery);
-                  }).toList();
-                  if (filtered.isEmpty) {
-                    return Center(child: Text('No tenants found.'));
-                  }
-                  return ListView.separated(
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 8),
-                    itemBuilder: (context, idx) {
-                      final doc = filtered[idx];
-                      final data = doc.data() as Map<String, dynamic>;
-                      final phone = data['phone'] ?? '';
-                      // Format phone for WhatsApp (Uganda)
-                      String waPhone = phone.toString().trim();
-                      if (waPhone.startsWith('0')) {
-                        waPhone = '+256' + waPhone.substring(1);
-                      }
-                      if (!waPhone.startsWith('+256')) {
-                        waPhone =
-                            '+256' + waPhone.replaceAll(RegExp(r'^\\+?'), '');
-                      }
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.transparent,
-                            child: Text(
-                              '${idx + 1}',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ),
-                          title: Text(data['name'] ?? '',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                              '${data['email'] ?? ''}\n${data['phone'] ?? ''}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.sms_outlined,
-                                    color: Colors.blue),
-                                tooltip: 'SMS',
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SendSmsPage(
-                                        phone: phone,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                icon: FaIcon(FontAwesomeIcons.whatsapp,
-                                    color: Colors.green),
-                                tooltip: 'WhatsApp',
-                                onPressed: () async {
-                                  final waUri = Uri.parse(
-                                      'https://wa.me/${waPhone.replaceAll('+', '')}');
-                                  await launchUrl(waUri);
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.edit, color: Colors.orange),
-                                tooltip: 'Edit',
-                                onPressed: () => _showAddOrEditTenantDialog(
-                                  tenantDoc: data,
-                                  tenantId: doc.id,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showAddOrEditTenantDialog(
-      {Map<String, dynamic>? tenantDoc, String? tenantId}) async {
-    final _formKey = GlobalKey<FormState>();
-    TextEditingController nameController =
-        TextEditingController(text: tenantDoc?['name'] ?? '');
-    TextEditingController phoneController =
-        TextEditingController(text: tenantDoc?['phone'] ?? '');
-    TextEditingController emailController =
-        TextEditingController(text: tenantDoc?['email'] ?? '');
-    TextEditingController ageController =
-        TextEditingController(text: tenantDoc?['age']?.toString() ?? '');
-    String? gender = tenantDoc?['gender'] ?? null;
-    bool isLoading = false;
-    String? errorMsg;
-    // Fetch facilities for this property
-    final facilitiesSnap = await FirebaseFirestore.instance
-        .collection('properties')
-        .doc(widget.propertyId)
-        .collection('facilities')
-        .get();
-    final facilities = facilitiesSnap.docs
-        .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
-        .toList();
-    List<DropdownMenuItem<String>> facilityItems = facilities.map((f) {
-      final rent = f['rent'];
-      String formattedRent = '';
-      if (rent != null) {
-        try {
-          final num rentNum = num.parse(rent.toString());
-          formattedRent = rentNum.toStringAsFixed(0).replaceAllMapped(
-                RegExp(r'\B(?=(\d{3})+(?!\d))'),
-                (match) => ',',
-              );
-        } catch (_) {
-          formattedRent = rent.toString();
-        }
-      }
-      return DropdownMenuItem<String>(
-        value: f['id'],
-        child: Text('${f['number']} - UGX $formattedRent'),
-      );
-    }).toList();
-    String? selectedFacilityId = tenantDoc?['facilityId'];
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(tenantId == null ? 'Add Tenant' : 'Edit Tenant'),
-              content: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: InputDecoration(hintText: 'Name'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: emailController,
-                        decoration: InputDecoration(hintText: 'Email'),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: phoneController,
-                        decoration: InputDecoration(hintText: 'Phone'),
-                        keyboardType: TextInputType.phone,
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: ageController,
-                        decoration: InputDecoration(hintText: 'Age'),
-                        keyboardType: TextInputType.number,
-                      ),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: gender,
-                        decoration: InputDecoration(hintText: 'Gender'),
-                        items: [
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
-                          DropdownMenuItem(
-                              value: 'Female', child: Text('Female')),
-                        ],
-                        onChanged: (val) => setState(() => gender = val),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: selectedFacilityId,
-                        decoration: InputDecoration(labelText: 'Facility/Room'),
-                        items: facilityItems,
-                        onChanged: (val) =>
-                            setState(() => selectedFacilityId = val),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Required' : null,
-                      ),
-                      SizedBox(height: 8),
-                      if (errorMsg != null) ...[
-                        SizedBox(height: 8),
-                        Text(errorMsg!, style: TextStyle(color: Colors.red)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                if (tenantId != null)
-                  TextButton(
-                    onPressed: isLoading
-                        ? null
-                        : () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text('Delete Tenant'),
-                                content: Text(
-                                    'Are you sure you want to delete this tenant?'),
-                                actions: [
-                                  TextButton(
-                                    child: Text('Cancel'),
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                  ),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red),
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: Text('Delete'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              setState(() => isLoading = true);
-                              await FirebaseFirestore.instance
-                                  .collection('properties')
-                                  .doc(widget.propertyId)
-                                  .collection('tenants')
-                                  .doc(tenantId)
-                                  .delete();
-                              Navigator.pop(context); // Close edit dialog
-                            }
-                          },
-                    child: Text('Delete', style: TextStyle(color: Colors.red)),
-                  ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: m3Primary,
-                    foregroundColor: m3OnPrimary,
-                  ),
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            setState(() => isLoading = true);
-                            try {
-                              final selectedFacility = facilities.firstWhere(
-                                  (f) => f['id'] == selectedFacilityId);
-                              final tenantData = {
-                                'name': nameController.text.trim(),
-                                'displayName': nameController.text.trim(),
-                                'email':
-                                    emailController.text.trim().toLowerCase(),
-                                'phone': phoneController.text.trim(),
-                                'age': int.tryParse(ageController.text.trim()),
-                                'gender': gender,
-                                'role': 'tenant',
-                                'createdAt': FieldValue.serverTimestamp(),
-                                'propertyId': widget.propertyId,
-                                'propertyName': widget.propertyName,
-                                'facilityId': selectedFacilityId,
-                                'facilityNumber': selectedFacility['number'],
-                                'facilityRent': selectedFacility['rent'],
-                              };
-                              final tenantsRef = FirebaseFirestore.instance
-                                  .collection('properties')
-                                  .doc(widget.propertyId)
-                                  .collection('tenants');
-                              if (tenantId == null) {
-                                await tenantsRef.add(tenantData);
-                              } else {
-                                await tenantsRef
-                                    .doc(tenantId)
-                                    .update(tenantData);
-                              }
-                              Navigator.pop(context);
-                            } catch (e) {
-                              setState(() {
-                                isLoading = false;
-                                errorMsg = 'Failed to save tenant: $e';
-                              });
-                            }
-                          }
-                        },
-                  child: isLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : Text(tenantId == null ? 'Add' : 'Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }
@@ -2542,7 +2097,7 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.edit, color: m3Primary),
+                              icon: Icon(Icons.edit, color: Colors.orange),
                               tooltip: 'Edit',
                               onPressed: () => _showAddOrEditFacilityDialog(
                                   facilityDoc: data, facilityId: f.id),
@@ -2583,6 +2138,192 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                               },
                             ),
                           ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TenantDatabasePage extends StatefulWidget {
+  final String propertyId;
+  final String propertyName;
+  final VoidCallback? onAddTenant;
+
+  const TenantDatabasePage({
+    Key? key,
+    required this.propertyId,
+    required this.propertyName,
+    this.onAddTenant,
+  }) : super(key: key);
+
+  @override
+  _TenantDatabasePageState createState() => _TenantDatabasePageState();
+}
+
+class _TenantDatabasePageState extends State<TenantDatabasePage> {
+  String search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Tenants of ${widget.propertyName}'),
+        actions: [
+          if (widget.onAddTenant != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.person_add, color: Colors.white),
+                label: Text('Add', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: m3Primary,
+                  foregroundColor: m3OnPrimary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
+                ),
+                onPressed: widget.onAddTenant,
+              ),
+            ),
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Logout',
+            onPressed: () async {
+              await AuthService().signOut();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Search tenants by name, phone, or email',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onChanged: (val) =>
+                  setState(() => search = val.trim().toLowerCase()),
+            ),
+            SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('properties')
+                    .doc(widget.propertyId)
+                    .collection('tenants')
+                    .orderBy('name')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading tenants'));
+                  }
+                  final tenants = snapshot.data?.docs ?? [];
+                  final filtered = tenants.where((t) {
+                    final data = t.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final phone =
+                        (data['phone'] ?? '').toString().toLowerCase();
+                    final email =
+                        (data['email'] ?? '').toString().toLowerCase();
+                    return search.isEmpty ||
+                        name.contains(search) ||
+                        phone.contains(search) ||
+                        email.contains(search);
+                  }).toList();
+                  if (filtered.isEmpty) {
+                    return Center(child: Text('No tenants found.'));
+                  }
+                  return ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, i) => SizedBox(height: 12),
+                    itemBuilder: (context, i) {
+                      final doc = filtered[i];
+                      final data = doc.data() as Map<String, dynamic>;
+                      return Card(
+                        elevation: 2,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: m3Primary.withOpacity(0.1),
+                            child: Icon(Icons.person, color: m3Primary),
+                          ),
+                          title: Text(data['name'] ?? '',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Phone: ${data['phone'] ?? ''}'),
+                              Text('Email: ${data['email'] ?? ''}'),
+                              Text('Facility: ${data['facilityNumber'] ?? ''}'),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.sms, color: Colors.blue),
+                                tooltip: 'Send SMS',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SendSmsPage(
+                                        phone: data['phone'] ?? '',
+                                        tenantName: data['name'] ?? '',
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.orange),
+                                tooltip: 'Edit Tenant',
+                                onPressed: () {
+                                  widget.onAddTenant?.call();
+                                },
+                              ),
+                              IconButton(
+                                icon: FaIcon(FontAwesomeIcons.whatsapp,
+                                    color: Color(0xFF25D366)),
+                                tooltip: 'WhatsApp',
+                                onPressed: () async {
+                                  final phone = data['phone'] ?? '';
+                                  String cleanPhone = phone.trim();
+                                  if (cleanPhone.startsWith('0')) {
+                                    cleanPhone =
+                                        '+256' + cleanPhone.substring(1);
+                                  }
+                                  cleanPhone = cleanPhone
+                                      .replaceAll('+', '')
+                                      .replaceAll(' ', '');
+                                  final url = 'https://wa.me/$cleanPhone';
+                                  if (await canLaunch(url)) {
+                                    await launch(url);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
