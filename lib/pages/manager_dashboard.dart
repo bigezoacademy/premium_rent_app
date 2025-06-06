@@ -1833,20 +1833,6 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search input on its own row with border
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search by name, email or phone',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-              ),
-              onChanged: (val) =>
-                  setState(() => searchQuery = val.trim().toLowerCase()),
-            ),
             SizedBox(height: 12),
             Row(
               children: [
@@ -1862,6 +1848,34 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                 Spacer(),
               ],
             ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: const Color.fromARGB(255, 0, 21, 106),
+                          width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search by name, email or phone',
+                        prefixIcon: Icon(Icons.search),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      ),
+                      onChanged: (val) => setState(
+                          () => searchQuery = val.trim().toLowerCase()),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             SizedBox(height: 8),
             // Tenant count row
             FutureBuilder<QuerySnapshot>(
@@ -1875,11 +1889,37 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                 final total = snapshot.data!.docs.length;
                 return Padding(
                   padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
-                  child: Text('Total tenants: $total',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFbce5ff),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Total tenants: ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+                            fontSize: 24,
+                          ),
+                        ),
+                        Text(
+                          '$total',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF023994),
+                            fontSize: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
+
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
