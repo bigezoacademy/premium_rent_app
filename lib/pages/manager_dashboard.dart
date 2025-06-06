@@ -1732,6 +1732,16 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                   .collection('tenants');
                               if (tenantId == null) {
                                 await tenantsRef.add(tenantData);
+                                // After adding a new tenant, set the facility status to 'occupied'
+                                if (tenantId == null &&
+                                    selectedFacilityId != null) {
+                                  await FirebaseFirestore.instance
+                                      .collection('properties')
+                                      .doc(propertyId)
+                                      .collection('facilities')
+                                      .doc(selectedFacilityId)
+                                      .update({'status': 'occupied'});
+                                }
                               } else {
                                 await tenantsRef
                                     .doc(tenantId)
@@ -1825,6 +1835,8 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
     TextEditingController descriptionController =
         TextEditingController(text: facilityDoc?['description'] ?? '');
     String? facilityType = facilityDoc?['type'];
+    // Add status field, default to 'unoccupied' if not set
+    String status = facilityDoc?['status'] ?? 'unoccupied';
     bool isLoading = false;
 
     // Fetch property type for this property
@@ -1915,6 +1927,22 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                         ),
                         maxLines: 2,
                       ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: status,
+                        decoration: InputDecoration(labelText: 'Status'),
+                        items: [
+                          DropdownMenuItem(
+                              value: 'unoccupied', child: Text('Unoccupied')),
+                          DropdownMenuItem(
+                              value: 'occupied', child: Text('Occupied')),
+                          DropdownMenuItem(
+                              value: 'under renovation',
+                              child: Text('Under Renovation')),
+                        ],
+                        onChanged: (val) =>
+                            setState(() => status = val ?? 'unoccupied'),
+                      ),
                     ],
                   ),
                 ),
@@ -1944,21 +1972,16 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                                 'createdAt': FieldValue.serverTimestamp(),
                                 'description':
                                     descriptionController.text.trim(),
-                                if (propertyType == 'Residential Rentals' ||
-                                    propertyType ==
-                                        'Residential Apartments') ...{
+                                'status': status,
+                                if (facilityType != null) 'type': facilityType,
+                                if (bedroomsController.text.isNotEmpty)
                                   'bedrooms': int.tryParse(
                                           bedroomsController.text.trim()) ??
                                       0,
+                                if (bathroomsController.text.isNotEmpty)
                                   'bathrooms': int.tryParse(
                                           bathroomsController.text.trim()) ??
                                       0,
-                                },
-                                if (propertyType == 'Shop Rentals' ||
-                                    propertyType ==
-                                        'Mall Commercial Spaces') ...{
-                                  'type': facilityType,
-                                },
                               };
                               final ref = FirebaseFirestore.instance
                                   .collection('properties')
@@ -2593,6 +2616,16 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                                   .collection('tenants');
                               if (tenantId == null) {
                                 await tenantsRef.add(tenantData);
+                                // After adding a new tenant, set the facility status to 'occupied'
+                                if (tenantId == null &&
+                                    selectedFacilityId != null) {
+                                  await FirebaseFirestore.instance
+                                      .collection('properties')
+                                      .doc(propertyId)
+                                      .collection('facilities')
+                                      .doc(selectedFacilityId)
+                                      .update({'status': 'occupied'});
+                                }
                               } else {
                                 await tenantsRef
                                     .doc(tenantId)
