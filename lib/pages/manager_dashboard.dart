@@ -1798,8 +1798,8 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
           ],
         ),
         onTap: onTap,
-      ),
-    );
+      ), // <-- FIX: close ListTile
+    ); // <-- FIX: close Card
   }
 }
 
@@ -1833,23 +1833,23 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Search input on its own row with border
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Search by name, email or phone',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              ),
+              onChanged: (val) =>
+                  setState(() => searchQuery = val.trim().toLowerCase()),
+            ),
+            SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search by name, email or phone',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                    ),
-                    onChanged: (val) =>
-                        setState(() => searchQuery = val.trim().toLowerCase()),
-                  ),
-                ),
-                SizedBox(width: 12),
                 ElevatedButton.icon(
                   icon: Icon(Icons.person_add),
                   label: Text('Add'),
@@ -1859,6 +1859,7 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                   ),
                   onPressed: () => _showAddOrEditTenantDialog(),
                 ),
+                Spacer(),
               ],
             ),
             SizedBox(height: 8),
@@ -1923,11 +1924,21 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                       }
                       if (!waPhone.startsWith('+256')) {
                         waPhone =
-                            '+256' + waPhone.replaceAll(RegExp(r'^\+?'), '');
+                            '+256' + waPhone.replaceAll(RegExp(r'^\\+?'), '');
                       }
                       return Card(
                         child: ListTile(
-                          leading: Icon(Icons.person, color: Colors.green),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.transparent,
+                            child: Text(
+                              '${idx + 1}',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
                           title: Text(data['name'] ?? '',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(
