@@ -13,7 +13,7 @@ class OwnerDashboard extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('Owner Dashboard'),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
         actions: [
           IconButton(
             icon: Icon(Icons.logout),

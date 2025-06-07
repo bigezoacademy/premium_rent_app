@@ -26,7 +26,7 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('G-Realm Studio Admin Dashboard'),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
         actions: [
           IconButton(
             icon: Icon(Icons.logout),
@@ -75,8 +75,8 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
             ElevatedButton(
               onPressed: isLoading ? null : _addManager,
               child: Text('Add Property Manager'),
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: Color(0xFF8AC611)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Color.fromARGB(255, 66, 170, 25)),
             ),
             SizedBox(height: 32),
             Text('All Property Managers',

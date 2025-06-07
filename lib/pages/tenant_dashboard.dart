@@ -380,7 +380,7 @@ class TenantPropertyDetailPage extends StatelessWidget {
       appBar: AppBar(
         leading: BackButton(),
         title: Text(data['name'] ?? 'Property Details'),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),

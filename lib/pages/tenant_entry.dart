@@ -148,7 +148,7 @@ class NewUserLandingPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Welcome'),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
         elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
@@ -282,7 +282,7 @@ class PropertyPublicListing extends StatelessWidget {
       appBar: AppBar(
         title: Text('Available Properties',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -403,7 +403,8 @@ class PropertyPublicListing extends StatelessWidget {
                                     'Amenities:',
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF8AC611)),
+                                        color:
+                                            Color.fromARGB(255, 66, 170, 25)),
                                   ),
                                   Text(
                                     data['amenities'].toString(),
@@ -565,7 +566,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
       appBar: AppBar(
         title: Text(propertyData['name'] ?? 'Property Details',
             style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF8AC611),
+        backgroundColor: Color.fromARGB(255, 66, 170, 25),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -674,9 +675,14 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Un-occupied Facilities:',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text(
+                      'Un-occupied Facilities:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: const Color.fromARGB(255, 8, 113, 199),
+                      ),
+                    ),
                     SizedBox(height: 12),
                     Table(
                       columnWidths: {
@@ -712,7 +718,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                                 child: Row(
                                   children: [
                                     Text(
-                                      facility['name'] ?? 'Facility',
+                                      facility['number'] ?? 'Facility',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15),
@@ -720,7 +726,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                                     SizedBox(width: 8),
                                     ElevatedButton(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color(0xFF8AC611),
+                                        backgroundColor:
+                                            Color.fromARGB(255, 66, 170, 25),
                                         foregroundColor: Colors.white,
                                         minimumSize: Size(60, 32),
                                         padding: EdgeInsets.symmetric(

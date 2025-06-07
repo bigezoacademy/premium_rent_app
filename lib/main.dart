@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Premium Rent App',
       theme: ThemeData(
-        primaryColor: Color(0xFF8AC611),
+        primaryColor: Color.fromARGB(255, 66, 170, 25),
         colorScheme:
             ColorScheme.fromSwatch().copyWith(secondary: Color(0xFFC65611)),
         scaffoldBackgroundColor: Colors.white,

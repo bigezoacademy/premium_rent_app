@@ -910,7 +910,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               children: [
                 Text(propertyName,
                     style: TextStyle(
-                        color: Color(0xFF8AC611), // Light green
+                        color: Color.fromARGB(255, 66, 170, 25), // Light green
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
