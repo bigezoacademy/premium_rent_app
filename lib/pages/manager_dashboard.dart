@@ -2317,76 +2317,117 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                       final doc = filtered[idx];
                       final data = doc.data() as Map<String, dynamic>;
                       return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.blue.shade50,
-                            child: Text(
-                              '${idx + 1}',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            data['name'] ?? '',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 0),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if ((data['phone'] ?? '').toString().isNotEmpty)
-                                Text('Phone: ${data['phone']}'),
-                              if ((data['email'] ?? '').toString().isNotEmpty)
-                                Text('Email: ${data['email']}'),
-                              if ((data['facilityNumber'] ?? '')
-                                  .toString()
-                                  .isNotEmpty)
-                                Text('Room: ${data['facilityNumber']}'),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.sms, color: m3Primary),
-                                tooltip: 'Send SMS',
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SendSmsPage(
-                                        tenantPhone: data['phone'] ?? '',
-                                        tenantName: data['name'] ?? '',
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 12.0, right: 8.0, top: 8.0),
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.blue.shade50,
+                                  child: Text(
+                                    '${idx + 1}',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Tenant name row
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 4.0, right: 8.0),
+                                      child: Text(
+                                        data['name'] ?? '',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                icon: FaIcon(FontAwesomeIcons.whatsapp,
-                                    color: Colors.green),
-                                tooltip: 'WhatsApp',
-                                onPressed: () async {
-                                  final phone = data['phone'] ?? '';
-                                  final name = data['name'] ?? '';
-                                  final url =
-                                      'https://wa.me/${phone.toString().replaceAll('+', '').replaceAll(' ', '')}?text=Hello%20$name';
-                                  if (await canLaunch(url)) {
-                                    await launch(url);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content:
-                                              Text('Could not open WhatsApp.')),
-                                    );
-                                  }
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.edit, color: m3Secondary),
-                                tooltip: 'Edit Tenant',
-                                onPressed: () => _editTenant(data, doc.id),
+                                    // Facility/Room number row
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 2.0, right: 8.0),
+                                      child: Text(
+                                        (data['facilityNumber'] ?? '')
+                                                .toString()
+                                                .isNotEmpty
+                                            ? 'Room: ${data['facilityNumber']}'
+                                            : '',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    // Action icons row
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 6.0, right: 8.0),
+                                      child: Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.sms,
+                                                color: m3Primary),
+                                            tooltip: 'Send SMS',
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      SendSmsPage(
+                                                    tenantPhone:
+                                                        data['phone'] ?? '',
+                                                    tenantName:
+                                                        data['name'] ?? '',
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: FaIcon(
+                                                FontAwesomeIcons.whatsapp,
+                                                color: Colors.green),
+                                            tooltip: 'WhatsApp',
+                                            onPressed: () async {
+                                              final phone = data['phone'] ?? '';
+                                              final name = data['name'] ?? '';
+                                              final url =
+                                                  'https://wa.me/${phone.toString().replaceAll('+', '').replaceAll(' ', '')}?text=Hello%20$name';
+                                              if (await canLaunch(url)) {
+                                                await launch(url);
+                                              } else {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(
+                                                          'Could not open WhatsApp.')),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: Icon(Icons.edit,
+                                                color: m3Secondary),
+                                            tooltip: 'Edit Tenant',
+                                            onPressed: () =>
+                                                _editTenant(data, doc.id),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
