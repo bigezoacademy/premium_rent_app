@@ -663,7 +663,14 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                         (tenant is String && tenant.trim().isEmpty));
               }).toList();
 
-              if (unoccupied.isNotEmpty) {
+              // Only show facilities whose "status" is exactly "unoccupied"
+              final unoccupiedFacilities = unoccupied.where((facility) {
+                final status =
+                    (facility['status'] ?? '').toString().toLowerCase();
+                return status == 'unoccupied';
+              }).toList();
+
+              if (unoccupiedFacilities.isNotEmpty) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -697,7 +704,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                             ),
                           ],
                         ),
-                        ...unoccupied.map((facility) {
+                        ...unoccupiedFacilities.map((facility) {
                           return TableRow(
                             children: [
                               Padding(
