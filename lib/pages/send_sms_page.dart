@@ -52,7 +52,7 @@ class _SendSmsPageState extends State<SendSmsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Send SMS to Tenant'),
-        backgroundColor: Color(0xFF2196F3),
+        backgroundColor: Color.fromARGB(255, 31, 171, 50),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -70,7 +70,24 @@ class _SendSmsPageState extends State<SendSmsPage> {
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Message',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.blue,
+                    width: 2,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.blue,
+                    width: 2,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Colors.blue,
+                    width: 2,
+                  ),
+                ),
               ),
             ),
             SizedBox(height: 16),
