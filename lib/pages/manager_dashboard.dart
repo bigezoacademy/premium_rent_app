@@ -2056,7 +2056,26 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                       hintText: 'Search by facility/room number',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: Color(0xFF002366), // Dark blue
+                          width: 2,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: Color(0xFF002366), // Dark blue
+                          width: 2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: Color(0xFF002366), // Dark blue
+                          width: 2,
+                        ),
+                      ),
                       contentPadding:
                           EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                     ),

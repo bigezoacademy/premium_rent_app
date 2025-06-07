@@ -566,7 +566,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
       appBar: AppBar(
         title: Text(propertyData['name'] ?? 'Property Details',
             style: TextStyle(color: Colors.white)),
-        backgroundColor: Color.fromARGB(255, 66, 170, 25),
+        backgroundColor: Color.fromARGB(255, 24, 150, 32),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -654,21 +654,13 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
             Center(child: CircularProgressIndicator())
           else
             (() {
-              // Filter only unoccupied facilities
-              final unoccupied = _facilities.where((facility) {
-                // Consider unoccupied if 'occupied' is false or null, or 'tenant' is null/empty
-                final occupied = facility['occupied'];
-                final tenant = facility['tenant'];
-                return (occupied == null || occupied == false) &&
-                    (tenant == null ||
-                        (tenant is String && tenant.trim().isEmpty));
-              }).toList();
-
-              // Only show facilities whose "status" is exactly "unoccupied"
-              final unoccupiedFacilities = unoccupied.where((facility) {
+              // Only show facilities whose "status" is exactly "unoccupied" and propertyId matches
+              final unoccupiedFacilities = _facilities.where((facility) {
                 final status =
                     (facility['status'] ?? '').toString().toLowerCase();
-                return status == 'unoccupied';
+                final propertyId = facility['propertyId'] ?? '';
+                return status == 'unoccupied' &&
+                    propertyId == widget.propertyId;
               }).toList();
 
               if (unoccupiedFacilities.isNotEmpty) {
@@ -727,7 +719,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                                     ElevatedButton(
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
-                                            Color.fromARGB(255, 66, 170, 25),
+                                            Color.fromARGB(255, 31, 162, 42),
                                         foregroundColor: Colors.white,
                                         minimumSize: Size(60, 32),
                                         padding: EdgeInsets.symmetric(
@@ -774,7 +766,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                       children: [
                         Text(
                             'No unoccupied facilities/rooms listed for this property.',
-                            style: TextStyle(color: Colors.grey)),
+                            style: TextStyle(
+                                color: const Color.fromARGB(255, 193, 39, 39))),
                         SizedBox(height: 24),
                       ],
                     );

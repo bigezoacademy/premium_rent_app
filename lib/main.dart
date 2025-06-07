@@ -327,7 +327,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                       SizedBox(height: 12),
                       // Property Manager info above the contact button
                       Text(
-                        'Want to become a property manager? Contact G-Realm Studio.',
+                        'Want to become a property manager?',
                         style: TextStyle(fontSize: 14, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),
@@ -378,7 +378,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                       SizedBox(height: 16),
                       // Tenant info above the property listing button
                       Text(
-                        'Looking to rent? Browse our available properties and become a tenant today!',
+                        'Looking to rent? Browse our available properties!',
                         style: TextStyle(fontSize: 14, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),
