@@ -16,7 +16,7 @@ class OwnerDashboard extends StatelessWidget {
         backgroundColor: Color.fromARGB(255, 66, 170, 25),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
             onPressed: () async {
               await AuthService().signOut();

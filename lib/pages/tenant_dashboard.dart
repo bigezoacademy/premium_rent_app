@@ -47,7 +47,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
         backgroundColor: Colors.black,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout, color: Colors.green),
+            icon: Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
             onPressed: () async {
               await AuthService().signOut();

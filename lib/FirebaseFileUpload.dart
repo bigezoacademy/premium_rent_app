@@ -31,7 +31,7 @@ class FirebaseFileUpload {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('File uploaded successfully.'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color.fromARGB(255, 21, 136, 54),
         ),
       );
     } catch (e) {

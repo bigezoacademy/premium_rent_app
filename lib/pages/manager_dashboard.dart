@@ -11,10 +11,10 @@ import '../../auth_service.dart';
 import '../../main.dart';
 
 // Custom Material 3 color palette with #3b6939 as main color
-const Color m3Primary = Color.fromARGB(255, 34, 157, 30); // Main green
+const Color m3Primary = Color.fromARGB(255, 21, 136, 54); // Main green
 const Color m3OnPrimary = Color(0xFFFFFFFF); // On Primary
 const Color m3Secondary =
-    Color.fromARGB(255, 94, 94, 94); // Harmonized green secondary
+    Color.fromARGB(255, 21, 136, 54); // Harmonized green secondary
 const Color m3OnSecondary = Color(0xFFFFFFFF); // On Secondary
 const Color m3Background = Color(0xFFF6FBF4); // Light green-tinted background
 const Color m3Surface = Color(0xFFF6FBF4); // Surface
@@ -59,7 +59,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
             foregroundColor: m3OnPrimary,
             actions: [
               IconButton(
-                icon: Icon(Icons.logout, color: m3Secondary), // light green
+                icon: Icon(Icons.logout, color: Colors.white),
                 onPressed: widget.onLogout ??
                     () async {
                       await AuthService().signOut();
@@ -1772,37 +1772,17 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     );
   }
 
-  // Card widget for property selection list
   Widget buildPropertyCard(
-    Map<String, dynamic> property,
-    VoidCallback onSelect,
-    VoidCallback onEdit,
-  ) {
+      Map<String, dynamic> data, VoidCallback onSelect, VoidCallback onEdit) {
     return Card(
-      elevation: 3,
-      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       child: ListTile(
-        title: Text(
-          property['name'] ?? '',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        subtitle: Text(property['location'] ?? ''),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(Icons.edit, color: m3Secondary),
-              tooltip: 'Edit Property',
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: Icon(Icons.arrow_forward_ios, color: m3Primary),
-              tooltip: 'Select Property',
-              onPressed: onSelect,
-            ),
-          ],
-        ),
+        title: Text(data['name'] ?? 'Property'),
+        subtitle: Text(data['location'] ?? ''),
         onTap: onSelect,
+        trailing: IconButton(
+          icon: Icon(Icons.edit, color: m3Primary),
+          onPressed: onEdit,
+        ),
       ),
     );
   }
@@ -2244,7 +2224,7 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
               children: [
                 Text(widget.propertyName,
                     style: TextStyle(
-                        color: Colors.blue,
+                        color: m3Primary,
                         fontWeight: FontWeight.bold,
                         fontSize: 18)),
               ],

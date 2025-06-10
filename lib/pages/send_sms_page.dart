@@ -72,19 +72,19 @@ class _SendSmsPageState extends State<SendSmsPage> {
                 labelText: 'Message',
                 border: OutlineInputBorder(
                   borderSide: BorderSide(
-                    color: Colors.blue,
+                    color: Color.fromARGB(255, 0, 76, 138), // A nice blue
                     width: 2,
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
-                    color: Colors.blue,
+                    color: Color.fromARGB(255, 0, 76, 138),
                     width: 2,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderSide: BorderSide(
-                    color: Colors.blue,
+                    color: Color.fromARGB(255, 0, 76, 138),
                     width: 2,
                   ),
                 ),
@@ -97,7 +97,7 @@ class _SendSmsPageState extends State<SendSmsPage> {
                   icon: Icon(Icons.send),
                   label: Text('Send SMS'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2196F3),
+                    backgroundColor: Color.fromARGB(255, 0, 76, 138),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius:

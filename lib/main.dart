@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Premium Rent App',
       theme: ThemeData(
-        primaryColor: Color.fromARGB(255, 66, 170, 25),
+        primaryColor: Color.fromARGB(255, 21, 136, 54),
         colorScheme:
             ColorScheme.fromSwatch().copyWith(secondary: Color(0xFFC65611)),
         scaffoldBackgroundColor: Colors.white,
@@ -336,7 +336,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                         icon: Icon(Icons.business, color: Colors.white),
                         label: Text('Contact G-Realm Studio'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF3B6939),
+                          backgroundColor: Color.fromARGB(255, 21, 136, 54),
                           foregroundColor: Colors.white,
                           minimumSize: Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(

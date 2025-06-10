@@ -29,7 +29,7 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
         backgroundColor: Color.fromARGB(255, 66, 170, 25),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: Colors.white),
             tooltip: 'Logout',
             onPressed: () async {
               await AuthService().signOut();

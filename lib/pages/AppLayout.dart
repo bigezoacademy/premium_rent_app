@@ -38,7 +38,7 @@ class AppLayout extends StatelessWidget {
               Navigator.push(
                   context, MaterialPageRoute(builder: (context) => Home()));
             },
-            icon: Icon(Icons.logout),
+            icon: Icon(Icons.logout, color: Colors.white),
             color: Color.fromARGB(255, 255, 255, 255),
           ),
         ],
@@ -110,7 +110,7 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: Icon(Icons.logout),
+            leading: Icon(Icons.logout, color: Colors.white),
             title: Text('Logout', style: TextStyle(color: Colors.black)),
             onTap: () {
               // Handle Logout click
