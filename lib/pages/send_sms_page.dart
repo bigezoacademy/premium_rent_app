@@ -52,7 +52,7 @@ class _SendSmsPageState extends State<SendSmsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Send SMS to Tenant'),
-        backgroundColor: Color.fromARGB(255, 31, 171, 50),
+        backgroundColor: Color.fromARGB(255, 21, 136, 54),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),

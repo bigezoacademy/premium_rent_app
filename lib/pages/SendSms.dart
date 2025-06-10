@@ -34,7 +34,8 @@ class SendSMS {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        print("Response: \n${response.body}");
+        print("Response: \n");
+        print(response.body);
         sendingStatus = "Success";
         return "SMS sent successfully!";
       } else {
@@ -46,7 +47,8 @@ class SendSMS {
     } catch (e) {
       sendingStatus = "Failed";
       print("Error: $e");
-      return "Error: $e";
+      // Only show error if status code was not 200
+      return "Failed to send SMS. Please check your connection or try again.";
     }
   }
 }
