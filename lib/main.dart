@@ -92,7 +92,22 @@ Future<void> ensureCollectionsAndLinksForUser(
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _showSplash = true;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration(seconds: 2), () {
+      setState(() => _showSplash = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -125,7 +140,23 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: AuthHomeScreen(),
+      home: _showSplash ? SplashScreen() : AuthHomeScreen(),
+    );
+  }
+}
+
+class SplashScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Image.asset(
+          'assets/logo.png', // Change to your preferred asset
+          width: 180,
+          fit: BoxFit.contain,
+        ),
+      ),
     );
   }
 }

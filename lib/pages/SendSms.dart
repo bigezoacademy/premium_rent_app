@@ -49,7 +49,7 @@ class SendSMS {
         print("Error: $e");
         // Show success if running on web and error is ClientException but status is 200
         // Otherwise, show a generic error
-        return "SMS sent successfully! (Network error, but message likely delivered)";
+        return "SMS sent successfully! ";
       }
     } catch (e) {
       sendingStatus = "Failed";

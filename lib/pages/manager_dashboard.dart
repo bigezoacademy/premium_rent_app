@@ -2196,10 +2196,38 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
                     itemBuilder: (context, index) {
                       final f = filtered[index];
                       final data = f.data() as Map<String, dynamic>;
+                      // Format rent with commas
+                      String rentStr = '';
+                      if (data['rent'] != null) {
+                        try {
+                          final num rentNum =
+                              num.parse(data['rent'].toString());
+                          rentStr = rentNum.toStringAsFixed(0).replaceAllMapped(
+                                RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                                (match) => ',',
+                              );
+                        } catch (_) {
+                          rentStr = data['rent'].toString();
+                        }
+                      }
                       return ListTile(
                         leading: Icon(Icons.meeting_room, color: m3Primary),
                         title: Text('Room ${data['number'] ?? ''}'),
-                        subtitle: Text('Rent: UGX ${data['rent'] ?? ''}'),
+                        subtitle: RichText(
+                          text: TextSpan(
+                            style:
+                                TextStyle(color: Colors.black87, fontSize: 14),
+                            children: [
+                              TextSpan(text: 'Rent: UGX '),
+                              TextSpan(
+                                text: rentStr,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black),
+                              ),
+                            ],
+                          ),
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
