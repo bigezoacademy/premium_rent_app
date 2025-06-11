@@ -49,31 +49,30 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: m3Background,
-          appBar: AppBar(
-            title: Text('Property Manager Dashboard'),
-            backgroundColor: m3Primary,
-            foregroundColor: m3OnPrimary,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.logout, color: Colors.white),
-                onPressed: widget.onLogout ??
-                    () async {
-                      await AuthService().signOut();
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => AuthHomeScreen()),
-                        (route) => false,
-                      );
-                    },
-              ),
-            ],
+    return Scaffold(
+      backgroundColor: m3Background,
+      appBar: AppBar(
+        title: Text('Property Manager Dashboard'),
+        backgroundColor: m3Primary,
+        foregroundColor: m3OnPrimary,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: widget.onLogout ??
+                () async {
+                  await AuthService().signOut();
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => AuthHomeScreen()),
+                    (route) => false,
+                  );
+                },
           ),
-          body: Padding(
+        ],
+      ),
+      body: Stack(
+        children: [
+          Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,30 +96,30 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               ],
             ),
           ),
-        ),
-        if (_isBusy)
-          ModalBarrier(
-              dismissible: false, color: Colors.black.withOpacity(0.2)),
-        if (_isBusy)
-          Center(
-            child: Container(
-              padding: EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(blurRadius: 16, color: Colors.black12)],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: m3Primary),
-                  SizedBox(height: 16),
-                  Text('Please wait...', style: TextStyle(color: m3Primary)),
-                ],
+          if (_isBusy)
+            ModalBarrier(
+                dismissible: false, color: Colors.black.withOpacity(0.2)),
+          if (_isBusy)
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(blurRadius: 16, color: Colors.black12)],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: m3Primary),
+                    SizedBox(height: 16),
+                    Text('Please wait...', style: TextStyle(color: m3Primary)),
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2028,6 +2027,108 @@ class _FacilitiesPageState extends State<FacilitiesPage> {
               ],
             ),
             SizedBox(height: 12),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('properties')
+                  .doc(widget.propertyId)
+                  .collection('facilities')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                int occupied = 0;
+                int unoccupied = 0;
+                int total = 0;
+                if (snapshot.hasData) {
+                  final docs = snapshot.data!.docs;
+                  total = docs.length;
+                  for (var doc in docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final status =
+                        (data['status'] ?? '').toString().toLowerCase();
+                    if (status == 'occupied') {
+                      occupied++;
+                    } else if (status == 'unoccupied') {
+                      unoccupied++;
+                    }
+                  }
+                }
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(255, 0, 76, 138),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'OCCUPIED: $occupied',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(255, 0, 76, 138),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'UNOCCUPIED: $unoccupied',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: Color.fromARGB(255, 0, 76, 138),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'TOTAL: $total',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                );
+              },
+            ),
             Row(
               children: [
                 Expanded(
@@ -2260,6 +2361,97 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                   setState(() => search = val.trim().toLowerCase()),
             ),
             SizedBox(height: 16),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('properties')
+                  .doc(widget.propertyId)
+                  .collection('tenants')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                int total = 0;
+                int male = 0;
+                int female = 0;
+                if (snapshot.hasData) {
+                  final tenants = snapshot.data!.docs;
+                  total = tenants.length;
+                  male = tenants
+                      .where((t) =>
+                          (t['gender'] ?? '').toString().toLowerCase() ==
+                          'male')
+                      .length;
+                  female = tenants
+                      .where((t) =>
+                          (t['gender'] ?? '').toString().toLowerCase() ==
+                          'female')
+                      .length;
+                }
+                return Container(
+                  margin: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Color.fromARGB(255, 0, 76, 138),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Table(
+                    columnWidths: {
+                      0: IntrinsicColumnWidth(),
+                      1: FlexColumnWidth(),
+                    },
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      TableRow(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Total Tenants',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('$total',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Male',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('$male',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                      TableRow(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('Female',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text('$female',
+                                style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
