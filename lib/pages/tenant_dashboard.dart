@@ -526,19 +526,32 @@ class _TenantDashboardState extends State<TenantDashboard> {
               color: Colors.green[50],
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text('Statistics',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontSize: 18)),
-                    SizedBox(height: 8),
-                    Text('Total Paid: UGX ${totalPaid.toStringAsFixed(0)}',
-                        style: TextStyle(color: Colors.black)),
-                    Text('Total Unpaid: UGX ${totalUnpaid.toStringAsFixed(0)}',
-                        style: TextStyle(color: Colors.black)),
+                    Text(
+                      'Balance Unpaid:',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'UGX',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      NumberFormat('#,##0').format(totalUnpaid),
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
                   ],
                 ),
               ),
