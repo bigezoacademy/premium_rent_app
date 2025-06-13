@@ -1108,7 +1108,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
         SizedBox(height: 24),
         TextButton(
           child: Text('Back to Property Selection',
-              style: TextStyle(fontFamily: 'Trebuchet MS')),
+              style: TextStyle(fontFamily: 'Poppins')),
           onPressed: () {
             setState(() {
               selectedPropertyId = null;
