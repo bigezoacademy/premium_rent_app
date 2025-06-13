@@ -133,6 +133,8 @@ class NewUserLandingPage extends StatelessWidget {
     String cleanPhone = phone.trim();
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '+256' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('+256')) {
+      cleanPhone = '+256' + cleanPhone.replaceAll(RegExp(r'^\+?'), '');
     }
     cleanPhone = cleanPhone.replaceAll('+', '').replaceAll(' ', '');
     final phoneUri = Uri.parse('https://wa.me/$cleanPhone');
@@ -588,6 +590,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     String cleanPhone = phone.trim();
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '+256' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('+256')) {
+      cleanPhone = '+256' + cleanPhone.replaceAll(RegExp(r'^\+?'), '');
     }
     cleanPhone = cleanPhone.replaceAll('+', '').replaceAll(' ', '');
     final phoneUri = Uri.parse('https://wa.me/$cleanPhone');

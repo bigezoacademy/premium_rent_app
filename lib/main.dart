@@ -117,13 +117,13 @@ class _MyAppState extends State<MyApp> {
         colorScheme:
             ColorScheme.fromSwatch().copyWith(secondary: Color(0xFFC65611)),
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Poppins',
+        fontFamily: 'Trebuchet MS',
         textTheme: ThemeData.light().textTheme.apply(
-              fontFamily: 'Poppins',
+              fontFamily: 'Trebuchet MS',
             ),
         appBarTheme: AppBarTheme(
           titleTextStyle: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily: 'Trebuchet MS',
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -131,12 +131,12 @@ class _MyAppState extends State<MyApp> {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            textStyle: TextStyle(fontFamily: 'Poppins'),
+            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            textStyle: TextStyle(fontFamily: 'Poppins'),
+            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
           ),
         ),
       ),
@@ -395,8 +395,12 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                                 TextButton(
                                   child: Text('Chat on WhatsApp'),
                                   onPressed: () async {
-                                    final phoneUri =
-                                        Uri.parse('https://wa.me/256773913902');
+                                    String phone = '0773913902';
+                                    if (phone.startsWith('0')) {
+                                      phone = '+256' + phone.substring(1);
+                                    }
+                                    final phoneUri = Uri.parse(
+                                        'https://wa.me/${phone.replaceAll('+', '')}');
                                     await launchUrl(phoneUri,
                                         mode: LaunchMode.externalApplication);
                                   },

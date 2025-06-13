@@ -2600,10 +2600,22 @@ class _TenantDatabasePageState extends State<TenantDatabasePage> {
                                                 color: Colors.green),
                                             tooltip: 'WhatsApp',
                                             onPressed: () async {
-                                              final phone = data['phone'] ?? '';
+                                              String phone =
+                                                  (data['phone'] ?? '')
+                                                      .toString()
+                                                      .trim();
                                               final name = data['name'] ?? '';
+                                              if (phone.startsWith('0')) {
+                                                phone =
+                                                    '+256' + phone.substring(1);
+                                              } else if (!phone
+                                                  .startsWith('+256')) {
+                                                phone = '+256' +
+                                                    phone.replaceAll(
+                                                        RegExp(r'^\+?'), '');
+                                              }
                                               final url =
-                                                  'https://wa.me/${phone.toString().replaceAll('+', '').replaceAll(' ', '')}?text=Hello%20$name';
+                                                  'https://wa.me/${phone.replaceAll('+', '').replaceAll(' ', '')}?text=Hello%20$name';
                                               if (await canLaunch(url)) {
                                                 await launch(url);
                                               } else {

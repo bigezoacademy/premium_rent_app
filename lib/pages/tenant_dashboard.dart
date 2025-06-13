@@ -191,24 +191,142 @@ class _TenantDashboardState extends State<TenantDashboard> {
           color: Colors.black,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Table(
+              columnWidths: const {
+                0: IntrinsicColumnWidth(),
+                1: FlexColumnWidth(),
+              },
               children: [
-                Text('Facility/Room $facilityNumber',
-                    style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Text(property['name'] ?? '',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
-                SizedBox(height: 8),
-                Text('Manager: $managerName',
-                    style: TextStyle(color: Colors.white)),
-                Text('Phone: $managerPhone',
-                    style: TextStyle(color: Colors.white)),
-                Text('Email: $managerEmail',
-                    style: TextStyle(color: Colors.white)),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Facility/Room',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        '$facilityNumber',
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Property',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        property['name'] ?? '',
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Manager',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        managerName,
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Phone',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        managerPhone,
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Email',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        managerEmail,
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -257,7 +375,16 @@ class _TenantDashboardState extends State<TenantDashboard> {
               tooltip: 'WhatsApp',
               onPressed: () async {
                 if (managerPhone.isNotEmpty) {
-                  final url = 'https://wa.me/$managerPhone';
+                  String cleanPhone = managerPhone.trim();
+                  if (cleanPhone.startsWith('0')) {
+                    cleanPhone = '+256' + cleanPhone.substring(1);
+                  } else if (!cleanPhone.startsWith('+256')) {
+                    cleanPhone =
+                        '+256' + cleanPhone.replaceAll(RegExp(r'^\+?'), '');
+                  }
+                  cleanPhone =
+                      cleanPhone.replaceAll('+', '').replaceAll(' ', '');
+                  final url = 'https://wa.me/$cleanPhone';
                   if (await canLaunch(url)) {
                     await launch(url);
                   }
