@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 import '../auth_service.dart';
 import '../main.dart';
 
@@ -218,6 +219,32 @@ class _TenantDashboardState extends State<TenantDashboard> {
                           color: const Color.fromARGB(255, 85, 195, 123),
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Monthly Rent',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 20.0, top: 8.0, bottom: 8.0),
+                      child: Text(
+                        'UGX ${_formatAmount(facility['rent'])}',
+                        style: TextStyle(
+                          color: const Color.fromARGB(255, 85, 195, 123),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -490,6 +517,17 @@ class _TenantDashboardState extends State<TenantDashboard> {
         ),
       ],
     );
+  }
+
+  String _formatAmount(dynamic amount) {
+    if (amount == null) return 'N/A';
+    try {
+      final num value =
+          amount is num ? amount : num.tryParse(amount.toString()) ?? 0;
+      return NumberFormat('#,##0').format(value);
+    } catch (e) {
+      return amount.toString();
+    }
   }
 }
 
