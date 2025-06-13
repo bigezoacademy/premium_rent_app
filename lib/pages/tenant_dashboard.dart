@@ -146,18 +146,54 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               ),
                             ),
                             child: Text('Manage'),
-                            onPressed: () {
+                            onPressed: () async {
+                              final facilityId = tenantData['facilityId'];
+                              final propertyId = prop.id;
+                              Map<String, dynamic> facilityData = {};
+                              if (facilityId != null) {
+                                final facilityDoc = await FirebaseFirestore
+                                    .instance
+                                    .collection('properties')
+                                    .doc(propertyId)
+                                    .collection('facilities')
+                                    .doc(facilityId)
+                                    .get();
+                                if (facilityDoc.exists) {
+                                  facilityData = facilityDoc.data()!;
+                                }
+                              }
                               setState(() {
                                 selectedFacilityId = tenantDoc.id;
-                                selectedFacility = tenantData;
+                                selectedFacility = {
+                                  ...tenantData,
+                                  ...facilityData
+                                };
                                 selectedProperty = propData;
                               });
                             },
                           ),
-                          onTap: () {
+                          onTap: () async {
+                            final facilityId = tenantData['facilityId'];
+                            final propertyId = prop.id;
+                            Map<String, dynamic> facilityData = {};
+                            if (facilityId != null) {
+                              final facilityDoc = await FirebaseFirestore
+                                  .instance
+                                  .collection('properties')
+                                  .doc(propertyId)
+                                  .collection('facilities')
+                                  .doc(facilityId)
+                                  .get();
+                              if (facilityDoc.exists) {
+                                facilityData = facilityDoc.data()!;
+                              }
+                            }
                             setState(() {
                               selectedFacilityId = tenantDoc.id;
-                              selectedFacility = tenantData;
+                              selectedFacility = {
+                                ...tenantData,
+                                ...facilityData
+                              };
                               selectedProperty = propData;
                             });
                           },
@@ -176,7 +212,11 @@ class _TenantDashboardState extends State<TenantDashboard> {
 
   Widget _buildTenantFacilityDashboard(BuildContext context) {
     final facility = selectedFacility ?? {};
+    debugPrint('[DEBUG] selectedFacility: ' + selectedFacility.toString());
+    debugPrint('[DEBUG] facility map: ' + facility.toString());
     final property = selectedProperty ?? {};
+    debugPrint('[DEBUG] selectedProperty: ' + selectedProperty.toString());
+    debugPrint('[DEBUG] property map: ' + property.toString());
     final managerPhone =
         property['ownerPhone'] ?? property['managerPhone'] ?? '';
     final managerEmail =
@@ -184,6 +224,8 @@ class _TenantDashboardState extends State<TenantDashboard> {
     final managerName = property['ownerName'] ?? property['managerName'] ?? '';
     final facilityNumber =
         facility['facilityNumber'] ?? facility['number'] ?? '';
+    debugPrint('[DEBUG] facilityNumber: ' + facilityNumber.toString());
+    debugPrint('[DEBUG] facility["rent"]: ' + facility['rent'].toString());
     final facilityId = selectedFacilityId;
     return ListView(
       padding: EdgeInsets.all(16),
