@@ -117,13 +117,13 @@ class _MyAppState extends State<MyApp> {
         colorScheme:
             ColorScheme.fromSwatch().copyWith(secondary: Color(0xFFC65611)),
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Trebuchet MS',
+        fontFamily: 'Poppins',
         textTheme: ThemeData.light().textTheme.apply(
-              fontFamily: 'Trebuchet MS',
+              fontFamily: 'Poppins',
             ),
         appBarTheme: AppBarTheme(
           titleTextStyle: TextStyle(
-            fontFamily: 'Trebuchet MS',
+            fontFamily: 'Poppins',
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -131,12 +131,12 @@ class _MyAppState extends State<MyApp> {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
+            textStyle: TextStyle(fontFamily: 'Poppins'),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            textStyle: TextStyle(fontFamily: 'Trebuchet MS'),
+            textStyle: TextStyle(fontFamily: 'Poppins'),
           ),
         ),
       ),
