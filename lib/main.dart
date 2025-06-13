@@ -418,7 +418,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                         icon: Icon(Icons.home, color: Colors.white),
                         label: Text('View Property Listings'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[850], // Dark grey
+                          backgroundColor: Color(0xFF002366), // Dark grey
                           foregroundColor: Colors.white,
                           minimumSize: Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(

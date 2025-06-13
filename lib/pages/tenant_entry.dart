@@ -273,8 +273,25 @@ class NewUserLandingPage extends StatelessWidget {
   }
 }
 
-class PropertyPublicListing extends StatelessWidget {
+class PropertyPublicListing extends StatefulWidget {
   const PropertyPublicListing({Key? key}) : super(key: key);
+
+  @override
+  State<PropertyPublicListing> createState() => _PropertyPublicListingState();
+}
+
+class _PropertyPublicListingState extends State<PropertyPublicListing> {
+  String? selectedCategory;
+  String searchQuery = '';
+  final List<String> propertyTypes = [
+    'All',
+    'Rental Apartments',
+    'Residential Rentals',
+    'Shop Rentals',
+    'Residential Apartments',
+    'Mall Commercial Spaces',
+    // Add more as needed
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +299,7 @@ class PropertyPublicListing extends StatelessWidget {
       appBar: AppBar(
         title: Text('Available Properties',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Color.fromARGB(255, 66, 170, 25),
+        backgroundColor: Color.fromARGB(255, 21, 136, 54),
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
@@ -291,138 +308,172 @@ class PropertyPublicListing extends StatelessWidget {
       ),
       body: Container(
         color: Color(0xFFF6FBF4),
-        child: StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance.collection('properties').snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error loading properties'));
-            }
-            final properties = snapshot.data?.docs ?? [];
-            if (properties.isEmpty) {
-              return Center(child: Text('No properties available.'));
-            }
-            return ListView.separated(
-              padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              itemCount: properties.length,
-              separatorBuilder: (context, i) => SizedBox(height: 24),
-              itemBuilder: (context, i) {
-                final prop = properties[i];
-                final data = prop.data() as Map<String, dynamic>;
-                final photos = (data['photos'] as List?) ?? [];
-                return InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PropertyDetailsPage(
-                          propertyData: data,
-                          propertyId: prop.id, // <-- pass the Firestore doc ID
-                          managerEmail: data['ownerEmail'] ?? '',
-                          managerPhone: data['ownerPhone'] ?? '',
-                          photos: photos,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    child: PopupMenuButton<String>(
+                      icon: Icon(Icons.filter_list,
+                          color: Color.fromARGB(255, 21, 136, 54)),
+                      tooltip: 'Filter by property type',
+                      onSelected: (val) {
+                        setState(
+                            () => selectedCategory = val == 'All' ? null : val);
+                      },
+                      itemBuilder: (context) => propertyTypes
+                          .map((type) => PopupMenuItem<String>(
+                                value: type,
+                                child: Text(type),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search by location or property name',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              BorderSide(color: Color(0xFF002366), width: 2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              BorderSide(color: Color(0xFF002366), width: 2),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              BorderSide(color: Color(0xFF002366), width: 2),
                         ),
                       ),
-                    );
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                      onChanged: (val) => setState(
+                          () => searchQuery = val.trim().toLowerCase()),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: photos.isNotEmpty
-                              ? Image.network(
-                                  photos[0],
-                                  width: 140,
-                                  height: 140,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  width: 140,
-                                  height: 140,
-                                  color: Color(0xFFE0E0E0),
-                                  child: Icon(Icons.home,
-                                      size: 60, color: Colors.grey[600]),
-                                ),
-                        ),
-                        SizedBox(width: 20),
-                        Expanded(
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('properties')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading properties'));
+                  }
+                  final properties = snapshot.data?.docs ?? [];
+                  final filtered = properties.where((prop) {
+                    final data = prop.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final location =
+                        (data['location'] ?? '').toString().toLowerCase();
+                    final category = (data['category'] ?? '').toString();
+                    final matchesCategory = selectedCategory == null ||
+                        category == selectedCategory;
+                    final matchesSearch = searchQuery.isEmpty ||
+                        name.contains(searchQuery) ||
+                        location.contains(searchQuery);
+                    return matchesCategory && matchesSearch;
+                  }).toList();
+                  if (filtered.isEmpty) {
+                    return Center(child: Text('No properties available.'));
+                  }
+                  return ListView.separated(
+                    padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, i) => SizedBox(height: 24),
+                    itemBuilder: (context, i) {
+                      final prop = filtered[i];
+                      final data = prop.data() as Map<String, dynamic>;
+                      final photos = (data['photos'] as List?) ?? [];
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PropertyDetailsPage(
+                                propertyData: data,
+                                propertyId: prop.id,
+                                managerEmail: data['managerEmail'] ?? '',
+                                managerPhone: data['managerPhone'] ?? '',
+                                photos: photos,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                          elevation: 2,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16.0),
-                            child: Column(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  data['name'] ?? 'Property',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF3B6939),
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  data['location'] ?? '',
-                                  style: TextStyle(
-                                      fontSize: 16, color: Colors.black87),
-                                ),
-                                if (data['rent'] != null) ...[
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Rent: UGX ${formatAmount(data['rent'])}',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFC65611),
+                                if (photos.isNotEmpty)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      photos[0],
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
                                     ),
+                                  )
+                                else
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(Icons.home,
+                                        size: 40, color: Colors.grey[600]),
                                   ),
-                                ],
-                                if (data['amenities'] != null &&
-                                    data['amenities']
-                                        .toString()
-                                        .trim()
-                                        .isNotEmpty) ...[
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Amenities:',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            Color.fromARGB(255, 66, 170, 25)),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(data['name'] ?? 'Unnamed',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18)),
+                                      if (data['location'] != null)
+                                        Text('Location: ${data['location']}'),
+                                      if (data['category'] != null)
+                                        Text('Category: ${data['category']}'),
+                                      if (data['managerName'] != null)
+                                        Text('Manager: ${data['managerName']}'),
+                                    ],
                                   ),
-                                  Text(
-                                    data['amenities'].toString(),
-                                    style: TextStyle(
-                                        fontSize: 15, color: Colors.black54),
-                                  ),
-                                ],
+                                ),
                               ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -653,131 +704,112 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
           if (_loadingFacilities)
             Center(child: CircularProgressIndicator())
           else
-            (() {
-              // Only show facilities whose "status" is exactly "unoccupied" and propertyId matches
-              final unoccupiedFacilities = _facilities.where((facility) {
-                final status =
-                    (facility['status'] ?? '').toString().toLowerCase();
-                final propertyId = facility['propertyId'] ?? '';
-                return status == 'unoccupied' &&
-                    propertyId == widget.propertyId;
-              }).toList();
-
-              if (unoccupiedFacilities.isNotEmpty) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Un-occupied Facilities:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: const Color.fromARGB(255, 8, 113, 199),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Table(
-                      columnWidths: {
-                        0: FlexColumnWidth(2),
-                        1: FlexColumnWidth(1),
-                      },
-                      border: TableBorder.all(color: Colors.grey[300]!),
-                      children: [
-                        TableRow(
-                          decoration: BoxDecoration(color: Color(0xFFF6FBF4)),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text('Facility/Room',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text('Rent',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                            ),
-                          ],
-                        ),
-                        ...unoccupiedFacilities.map((facility) {
-                          return TableRow(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      facility['number'] ?? 'Facility',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15),
-                                    ),
-                                    SizedBox(width: 8),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            Color.fromARGB(255, 21, 136, 54),
-                                        foregroundColor: Colors.white,
-                                        minimumSize: Size(60, 32),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 0),
-                                        textStyle: TextStyle(fontSize: 13),
-                                      ),
-                                      child: Text('Details'),
-                                      onPressed: () =>
-                                          _showFacilityDetails(facility),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  facility['rent'] != null
-                                      ? 'UGX ' +
-                                          NumberFormat('#,##0')
-                                              .format(facility['rent'])
-                                      : '',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.brown[800],
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-                  ],
-                );
-              } else {
-                return Builder(
-                  builder: (context) {
-                    print(
-                        'No unoccupied facilities/rooms listed for this property.');
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                            'No unoccupied facilities/rooms listed for this property.',
-                            style: TextStyle(
-                                color: const Color.fromARGB(255, 193, 39, 39))),
-                        SizedBox(height: 24),
-                      ],
-                    );
-                  },
-                );
-              }
-            })(),
+            ..._buildUnoccupiedFacilities(),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildUnoccupiedFacilities() {
+    final unoccupiedFacilities = _facilities.where((facility) {
+      final status = (facility['status'] ?? '').toString().toLowerCase();
+      final propertyId = facility['propertyId'] ?? '';
+      return status == 'unoccupied' && propertyId == widget.propertyId;
+    }).toList();
+
+    if (unoccupiedFacilities.isNotEmpty) {
+      return [
+        Text(
+          'Un-occupied Facilities:',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: const Color.fromARGB(255, 8, 113, 199),
+          ),
+        ),
+        SizedBox(height: 12),
+        Table(
+          columnWidths: {
+            0: FlexColumnWidth(2),
+            1: FlexColumnWidth(1),
+          },
+          border: TableBorder.all(color: Colors.grey[300]!),
+          children: [
+            TableRow(
+              decoration: BoxDecoration(color: Color(0xFFF6FBF4)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('Facility/Room',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('Rent',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
+            ),
+            ...unoccupiedFacilities.map((facility) {
+              return TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          facility['number'] ?? 'Facility',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 21, 136, 54),
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(60, 32),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 0),
+                            textStyle: TextStyle(fontSize: 13),
+                          ),
+                          child: Text('Details'),
+                          onPressed: () => _showFacilityDetails(facility),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      facility['rent'] != null
+                          ? 'UGX ' +
+                              NumberFormat('#,##0').format(facility['rent'])
+                          : '',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown[800],
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
+        SizedBox(height: 24),
+      ];
+    } else {
+      return [
+        Text(
+          'No unoccupied facilities/rooms listed for this property.',
+          style: TextStyle(color: const Color.fromARGB(255, 193, 39, 39)),
+        ),
+        SizedBox(height: 24),
+      ];
+    }
   }
 }
 
