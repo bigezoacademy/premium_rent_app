@@ -587,10 +587,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
               label: Text('Pay Rent', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               onPressed: () {
-                // TODO: Implement rent payment logic
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Rent payment coming soon!')),
-                );
+                _showPayRentScreen(context);
               },
             ),
             ElevatedButton.icon(
@@ -750,6 +747,215 @@ class _TenantDashboardState extends State<TenantDashboard> {
         ),
       ],
     );
+  }
+
+  void _showPayRentScreen(BuildContext context) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    final userId = currentUser.uid;
+    final facility = selectedFacility ?? {};
+    final property = selectedProperty ?? {};
+    final propertyName = property['name'] ?? '';
+    final facilityNumber =
+        facility['facilityNumber'] ?? facility['number'] ?? '';
+    final managerId = property['managerId'] ?? property['ownerId'];
+    // Fetch manager credentials
+    Map<String, dynamic>? managerCredentials;
+    if (managerId != null) {
+      final credDoc = await FirebaseFirestore.instance
+          .collection('credentials')
+          .doc(managerId)
+          .get();
+      managerCredentials = credDoc.data();
+    }
+    final pesapalCreds = managerCredentials?['pesapal'] ?? {};
+    final notificationId = pesapalCreds['notification_id'] ?? '';
+    // Fetch tenant billing address
+    final billingDoc = await FirebaseFirestore.instance
+        .collection('billing')
+        .doc(userId)
+        .get();
+    final billingData = billingDoc.data() ?? {};
+    // Months list
+    final months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    List<String> selectedMonths = [];
+    String currency = 'UGX';
+    double rentAmount = (facility['rent'] is num)
+        ? facility['rent'].toDouble()
+        : double.tryParse(facility['rent']?.toString() ?? '0') ?? 0;
+    double totalAmount = 0;
+    String description = '';
+    String branch = '$propertyName-$facilityNumber';
+    String callbackUrl =
+        'https://www.grealm.org/success'; // Replace with your app's success page
+    String redirectMode = '';
+    String transactionId = _generateTransactionId();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            totalAmount = rentAmount * selectedMonths.length;
+            description = selectedMonths.isEmpty
+                ? ''
+                : 'Rent for ' + selectedMonths.join(', ');
+            return Padding(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  left: 16,
+                  right: 16,
+                  top: 24),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pay Rent',
+                        style: TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text('Currency:'),
+                        SizedBox(width: 16),
+                        DropdownButton<String>(
+                          value: currency,
+                          items: [
+                            DropdownMenuItem(value: 'UGX', child: Text('UGX')),
+                            DropdownMenuItem(value: 'USD', child: Text('USD')),
+                          ],
+                          onChanged: (val) {
+                            setState(() => currency = val ?? 'UGX');
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Text('Select Months to Pay For:'),
+                    Wrap(
+                      spacing: 8,
+                      children: months.map((month) {
+                        final selected = selectedMonths.contains(month);
+                        return FilterChip(
+                          label: Text(month),
+                          selected: selected,
+                          onSelected: (val) {
+                            setState(() {
+                              if (val) {
+                                selectedMonths.add(month);
+                              } else {
+                                selectedMonths.remove(month);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    SizedBox(height: 12),
+                    Text('Amount:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                        '$currency ${NumberFormat('#,##0').format(totalAmount)}'),
+                    SizedBox(height: 12),
+                    Text('Description:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(description),
+                    SizedBox(height: 12),
+                    Text('Branch:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(branch),
+                    SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.edit, color: Colors.white),
+                          label: Text('Edit Billing Address'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF8AC611),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Future.delayed(Duration(milliseconds: 300), () {
+                              _showEditBillingAddressDialog(context);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton(
+                          child: Text('Back to Facilities',
+                              style: TextStyle(color: Colors.green)),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            setState(() {
+                              selectedFacilityId = null;
+                              selectedFacility = null;
+                              selectedProperty = null;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF8AC611),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Proceed to Pay'),
+                      onPressed: selectedMonths.isEmpty
+                          ? null
+                          : () {
+                              // Here you would proceed to payment logic
+                              // All required fields are ready:
+                              // currency, id (transactionId), amount (totalAmount),
+                              // description, callback_url, redirect_mode, notification_id, branch
+                              // and billing address from billingData
+                            },
+                    ),
+                    SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _generateTransactionId() {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*';
+    return List.generate(
+        16,
+        (index) => chars[(DateTime.now().millisecondsSinceEpoch + index * 31) %
+            chars.length]).join();
+  }
+
+  void _showEditBillingAddressDialog(BuildContext context) {
+    // Call your existing edit billing address logic here
+    // For example, you can call the same logic as your Edit Billing Address button
   }
 
   String _formatAmount(dynamic amount) {
