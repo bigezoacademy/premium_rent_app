@@ -761,12 +761,24 @@ class _TenantDashboardState extends State<TenantDashboard> {
     final managerId = property['managerId'] ?? property['ownerId'];
     // Fetch manager credentials
     Map<String, dynamic>? managerCredentials;
-    if (managerId != null) {
+    String? managerEmail = property['ownerEmail'] ?? property['managerEmail'];
+    if (managerEmail != null && managerEmail.isNotEmpty) {
+      final credQuery = await FirebaseFirestore.instance
+          .collection('credentials')
+          .where('userEmail', isEqualTo: managerEmail)
+          .limit(1)
+          .get();
+      if (credQuery.docs.isNotEmpty) {
+        managerCredentials = credQuery.docs.first.data();
+      }
+    } else if (property['managerId'] != null) {
       final credDoc = await FirebaseFirestore.instance
           .collection('credentials')
-          .doc(managerId)
+          .doc(property['managerId'])
           .get();
-      managerCredentials = credDoc.data();
+      if (credDoc.exists) {
+        managerCredentials = credDoc.data();
+      }
     }
     final pesapalCreds = managerCredentials?['pesapal'] ?? {};
     final notificationId = pesapalCreds['notification_id'] ?? '';
