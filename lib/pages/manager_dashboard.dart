@@ -52,7 +52,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     return Scaffold(
       backgroundColor: m3Background,
       appBar: AppBar(
-        title: Text('Property Manager Dashboard'),
+        title: Text('Manager Dashboard'),
         backgroundColor: m3Primary,
         foregroundColor: m3OnPrimary,
         actions: [
@@ -420,24 +420,6 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
                                         ? 'Required'
                                         : null,
                                   ),
-                                  SizedBox(height: 8),
-                                  if (categoryValue == 'Residential Rentals' ||
-                                      categoryValue == 'Residential Apartments')
-                                    DropdownButtonFormField<String>(
-                                      decoration: InputDecoration(
-                                          hintText: 'Has Kitchen'),
-                                      value: null,
-                                      items: [
-                                        DropdownMenuItem(
-                                            value: 'Yes', child: Text('Yes')),
-                                        DropdownMenuItem(
-                                            value: 'No', child: Text('No')),
-                                      ],
-                                      onChanged: (val) => setState(() {}),
-                                      validator: (v) => v == null || v.isEmpty
-                                          ? 'Required'
-                                          : null,
-                                    ),
                                   SizedBox(height: 8),
                                   Align(
                                     alignment: Alignment.centerLeft,
@@ -900,7 +882,7 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     return ListView(
       children: [
         Card(
-          color: Colors.black, // Changed from brownish to black
+          color: const Color.fromARGB(255, 27, 27, 27),
           margin: EdgeInsets.only(bottom: 16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -909,11 +891,160 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
               children: [
                 Text(propertyName,
                     style: TextStyle(
-                        color: Color.fromARGB(255, 66, 170, 25), // Light green
+                        color: Color.fromARGB(255, 34, 182, 101),
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
-                Text(subtitle,
+                Table(
+                  columnWidths: {
+                    0: IntrinsicColumnWidth(),
+                    1: FlexColumnWidth(),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    if (location.isNotEmpty)
+                      TableRow(children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Location:',
+                              style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text(location,
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ]),
+                    if (category.isNotEmpty)
+                      TableRow(children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Category:',
+                              style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text(category,
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ]),
+                    if (ownerName.isNotEmpty)
+                      TableRow(children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Owner:',
+                              style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text(ownerName,
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ]),
+                    if (ownerEmail.isNotEmpty)
+                      TableRow(children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Email:',
+                              style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Text(ownerEmail,
+                                  style: TextStyle(color: Colors.white)),
+                              SizedBox(width: 8),
+                              IconButton(
+                                icon: Icon(Icons.email,
+                                    color: Colors.orange, size: 20),
+                                tooltip: 'Send Email',
+                                onPressed: () async {
+                                  final Uri emailUri = Uri(
+                                    scheme: 'mailto',
+                                    path: ownerEmail,
+                                    query: Uri.encodeFull(
+                                        'subject=Hello $ownerName&body=Dear $ownerName,'),
+                                  );
+                                  if (await canLaunch(emailUri.toString())) {
+                                    await launch(emailUri.toString());
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(
+                                              'Could not open email client.')),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]),
+                    if (ownerPhone.isNotEmpty)
+                      TableRow(children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Phone:',
+                              style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Text(
+                                ownerPhone,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              SizedBox(width: 8),
+                              if (ownerPhone.isNotEmpty)
+                                IconButton(
+                                  icon: FaIcon(FontAwesomeIcons.whatsapp,
+                                      color: Colors.green, size: 20),
+                                  tooltip: 'WhatsApp',
+                                  onPressed: () async {
+                                    String phone = ownerPhone.trim();
+                                    // Always ensure phone starts with +256
+                                    if (phone.startsWith('0')) {
+                                      phone = '+256' + phone.substring(1);
+                                    } else if (!phone.startsWith('+256')) {
+                                      // Remove any leading + or 0 and add +256
+                                      phone = '+256' +
+                                          phone.replaceFirst(
+                                              RegExp(r'^[+0]+'), '');
+                                    }
+                                    final url =
+                                        'https://wa.me/${phone.replaceAll('+', '').replaceAll(' ', '')}?text=Hello%20$ownerName';
+                                    if (await canLaunch(url)) {
+                                      await launch(url);
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Could not open WhatsApp.')),
+                                      );
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                      ]),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text('Oversee property, billing, and analytics.',
                     style: TextStyle(fontSize: 16, color: Colors.white)),
               ],
             ),
