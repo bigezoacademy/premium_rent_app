@@ -402,6 +402,178 @@ class _TenantDashboardState extends State<TenantDashboard> {
         ),
         SizedBox(height: 24),
         Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              icon: Icon(Icons.edit, color: Colors.white),
+              label: Text('Edit Billing Address'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Color.fromARGB(255, 73, 73, 73), // Primary Green
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final currentUser = FirebaseAuth.instance.currentUser;
+                if (currentUser == null) return;
+                final userId = currentUser.uid;
+                final billingDoc = await FirebaseFirestore.instance
+                    .collection('billing')
+                    .doc(userId)
+                    .get();
+                Map<String, dynamic> billingData = billingDoc.data() ?? {};
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    final _formKey = GlobalKey<FormState>();
+                    final emailController = TextEditingController(
+                        text: billingData['email_address'] ??
+                            currentUser.email ??
+                            '');
+                    final phoneController = TextEditingController(
+                        text: billingData['phone_number'] ?? '');
+                    final countryCodeController = TextEditingController(
+                        text: billingData['country_code'] ?? 'UG');
+                    final firstNameController = TextEditingController(
+                        text: billingData['first_name'] ?? '');
+                    final middleNameController = TextEditingController(
+                        text: billingData['middle_name'] ?? '');
+                    final lastNameController = TextEditingController(
+                        text: billingData['last_name'] ?? '');
+                    final line1Controller = TextEditingController(
+                        text: billingData['line_1'] ?? '');
+                    final line2Controller = TextEditingController(
+                        text: billingData['line_2'] ?? '');
+                    final cityController =
+                        TextEditingController(text: billingData['city'] ?? '');
+                    final stateController =
+                        TextEditingController(text: billingData['state'] ?? '');
+                    final postalCodeController = TextEditingController(
+                        text: billingData['postal_code'] ?? '');
+                    final zipCodeController = TextEditingController(
+                        text: billingData['zip_code'] ?? '');
+                    return AlertDialog(
+                      title: Text('Edit Billing Address'),
+                      content: Form(
+                        key: _formKey,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextFormField(
+                                controller: emailController,
+                                decoration:
+                                    InputDecoration(labelText: 'Email Address'),
+                                validator: (v) =>
+                                    v == null || v.isEmpty ? 'Required' : null,
+                              ),
+                              TextFormField(
+                                controller: phoneController,
+                                decoration:
+                                    InputDecoration(labelText: 'Phone Number'),
+                                validator: (v) =>
+                                    v == null || v.isEmpty ? 'Required' : null,
+                              ),
+                              TextFormField(
+                                controller: countryCodeController,
+                                decoration:
+                                    InputDecoration(labelText: 'Country Code'),
+                              ),
+                              TextFormField(
+                                controller: firstNameController,
+                                decoration:
+                                    InputDecoration(labelText: 'First Name'),
+                              ),
+                              TextFormField(
+                                controller: middleNameController,
+                                decoration:
+                                    InputDecoration(labelText: 'Middle Name'),
+                              ),
+                              TextFormField(
+                                controller: lastNameController,
+                                decoration:
+                                    InputDecoration(labelText: 'Last Name'),
+                              ),
+                              TextFormField(
+                                controller: line1Controller,
+                                decoration: InputDecoration(
+                                    labelText: 'Address Line 1'),
+                              ),
+                              TextFormField(
+                                controller: line2Controller,
+                                decoration: InputDecoration(
+                                    labelText: 'Address Line 2'),
+                              ),
+                              TextFormField(
+                                controller: cityController,
+                                decoration: InputDecoration(labelText: 'City'),
+                              ),
+                              TextFormField(
+                                controller: stateController,
+                                decoration: InputDecoration(labelText: 'State'),
+                              ),
+                              TextFormField(
+                                controller: postalCodeController,
+                                decoration:
+                                    InputDecoration(labelText: 'Postal Code'),
+                              ),
+                              TextFormField(
+                                controller: zipCodeController,
+                                decoration:
+                                    InputDecoration(labelText: 'Zip Code'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Cancel'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF8AC611),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('Save'),
+                          onPressed: () async {
+                            if (_formKey.currentState?.validate() ?? false) {
+                              await FirebaseFirestore.instance
+                                  .collection('billing')
+                                  .doc(userId)
+                                  .set({
+                                'email_address': emailController.text.trim(),
+                                'phone_number': phoneController.text.trim(),
+                                'country_code':
+                                    countryCodeController.text.trim(),
+                                'first_name': firstNameController.text.trim(),
+                                'middle_name': middleNameController.text.trim(),
+                                'last_name': lastNameController.text.trim(),
+                                'line_1': line1Controller.text.trim(),
+                                'line_2': line2Controller.text.trim(),
+                                'city': cityController.text.trim(),
+                                'state': stateController.text.trim(),
+                                'postal_code': postalCodeController.text.trim(),
+                                'zip_code': zipCodeController.text.trim(),
+                              }, SetOptions(merge: true));
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Billing address saved!')),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        SizedBox(height: 24),
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             ElevatedButton.icon(
