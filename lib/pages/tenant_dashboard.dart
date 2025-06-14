@@ -863,6 +863,14 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               }
                             });
                           },
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: Colors.blue, // Blue border
+                              width: 2,
+                            ),
+                          ),
+                          selectedColor: Colors.blue.withOpacity(0.2),
+                          checkmarkColor: Colors.blue,
                         );
                       }).toList(),
                     ),
@@ -870,7 +878,13 @@ class _TenantDashboardState extends State<TenantDashboard> {
                     Text('Amount:',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     Text(
-                        '$currency ${NumberFormat('#,##0').format(totalAmount)}'),
+                      '$currency ${NumberFormat('#,##0').format(totalAmount)}',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 119, 29, 29), // Maroon color
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
+                    ),
                     SizedBox(height: 12),
                     Text('Description:',
                         style: TextStyle(fontWeight: FontWeight.bold)),
@@ -887,7 +901,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                           icon: Icon(Icons.edit, color: Colors.white),
                           label: Text('Edit Billing Address'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF8AC611),
+                            backgroundColor: Color.fromARGB(255, 71, 71, 71),
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () {
@@ -900,26 +914,9 @@ class _TenantDashboardState extends State<TenantDashboard> {
                       ],
                     ),
                     SizedBox(height: 12),
-                    Row(
-                      children: [
-                        TextButton(
-                          child: Text('Back to Facilities',
-                              style: TextStyle(color: Colors.green)),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            setState(() {
-                              selectedFacilityId = null;
-                              selectedFacility = null;
-                              selectedProperty = null;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF8AC611),
+                        backgroundColor: Color.fromARGB(255, 147, 32, 32),
                         foregroundColor: Colors.white,
                       ),
                       child: Text('Proceed to Pay'),
@@ -932,6 +929,28 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               // description, callback_url, redirect_mode, notification_id, branch
                               // and billing address from billingData
                             },
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.green, width: 2),
+                            foregroundColor:
+                                const Color.fromARGB(255, 41, 121, 43),
+                          ),
+                          child: Text('Back to Facilities',
+                              style: TextStyle(color: Colors.green)),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            setState(() {
+                              selectedFacilityId = null;
+                              selectedFacility = null;
+                              selectedProperty = null;
+                            });
+                          },
+                        ),
+                      ],
                     ),
                     SizedBox(height: 24),
                   ],
