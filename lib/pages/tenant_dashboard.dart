@@ -485,8 +485,10 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               ),
                               TextFormField(
                                 controller: middleNameController,
-                                decoration:
-                                    InputDecoration(labelText: 'Middle Name'),
+                                decoration: InputDecoration(
+                                  labelText: 'Middle Name',
+                                  hintText: '(Optional)',
+                                ),
                               ),
                               TextFormField(
                                 controller: lastNameController,
@@ -513,13 +515,17 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               ),
                               TextFormField(
                                 controller: postalCodeController,
-                                decoration:
-                                    InputDecoration(labelText: 'Postal Code'),
+                                decoration: InputDecoration(
+                                  labelText: 'Postal Code',
+                                  hintText: '(Optional)',
+                                ),
                               ),
                               TextFormField(
                                 controller: zipCodeController,
-                                decoration:
-                                    InputDecoration(labelText: 'Zip Code'),
+                                decoration: InputDecoration(
+                                  labelText: 'Zip Code',
+                                  hintText: '(Optional)',
+                                ),
                               ),
                             ],
                           ),
@@ -532,7 +538,7 @@ class _TenantDashboardState extends State<TenantDashboard> {
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF8AC611),
+                            backgroundColor: Color.fromARGB(255, 29, 29, 118),
                             foregroundColor: Colors.white,
                           ),
                           child: Text('Save'),
