@@ -750,254 +750,297 @@ class _TenantDashboardState extends State<TenantDashboard> {
   }
 
   void _showPayRentScreen(BuildContext context) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-    final userId = currentUser.uid;
-    final facility = selectedFacility ?? {};
-    final property = selectedProperty ?? {};
-    final propertyName = property['name'] ?? '';
-    final facilityNumber =
-        facility['facilityNumber'] ?? facility['number'] ?? '';
-    final managerId = property['managerId'] ?? property['ownerId'];
-    // Fetch manager credentials
-    Map<String, dynamic>? managerCredentials;
-    String? managerEmail = property['ownerEmail'] ?? property['managerEmail'];
-    if (managerEmail != null && managerEmail.isNotEmpty) {
-      final credQuery = await FirebaseFirestore.instance
-          .collection('credentials')
-          .where('userEmail', isEqualTo: managerEmail)
-          .limit(1)
-          .get();
-      if (credQuery.docs.isNotEmpty) {
-        managerCredentials = credQuery.docs.first.data();
+    print('[LOG] Entered _showPayRentScreen');
+    debugPrint('[DEBUG] Entered _showPayRentScreen');
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        print('[LOG] currentUser is null, returning');
+        debugPrint('[DEBUG] currentUser is null, returning');
+        return;
       }
-    } else if (property['managerId'] != null) {
-      final credDoc = await FirebaseFirestore.instance
-          .collection('credentials')
-          .doc(property['managerId'])
-          .get();
-      if (credDoc.exists) {
-        managerCredentials = credDoc.data();
+      final userId = currentUser.uid;
+      final facility = selectedFacility ?? {};
+      final property = selectedProperty ?? {};
+      final propertyName = property['name'] ?? '';
+      final facilityNumber =
+          facility['facilityNumber'] ?? facility['number'] ?? '';
+      final managerId = property['managerId'] ?? property['ownerId'];
+      // Fetch manager credentials
+      Map<String, dynamic>? managerCredentials;
+      String? managerEmail = property['managerEmail'] ?? property['ownerEmail'];
+      print('[LOG] managerEmail used for credentials: ' +
+          (managerEmail ?? 'NULL'));
+      debugPrint('[DEBUG] managerEmail used for credentials: ' +
+          (managerEmail ?? 'NULL'));
+      if (managerEmail != null && managerEmail.isNotEmpty) {
+        final credQuery = await FirebaseFirestore.instance
+            .collection('credentials')
+            .where('userEmail', isEqualTo: managerEmail)
+            .limit(1)
+            .get();
+        print('[LOG] credentials query docs: ' +
+            credQuery.docs.length.toString());
+        debugPrint('[DEBUG] credentials query docs: ' +
+            credQuery.docs.length.toString());
+        if (credQuery.docs.isNotEmpty) {
+          managerCredentials = credQuery.docs.first.data();
+          print('[LOG] managerCredentials: ' + managerCredentials.toString());
+          debugPrint(
+              '[DEBUG] managerCredentials: ' + managerCredentials.toString());
+        } else {
+          print('[LOG] No credentials found for managerEmail');
+          debugPrint('[DEBUG] No credentials found for managerEmail');
+        }
+      } else if (property['managerId'] != null) {
+        final credDoc = await FirebaseFirestore.instance
+            .collection('credentials')
+            .doc(property['managerId'])
+            .get();
+        if (credDoc.exists) {
+          managerCredentials = credDoc.data();
+          print('[LOG] managerCredentials (by managerId): ' +
+              managerCredentials.toString());
+          debugPrint('[DEBUG] managerCredentials (by managerId): ' +
+              managerCredentials.toString());
+        } else {
+          print('[LOG] No credentials found for managerId');
+          debugPrint('[DEBUG] No credentials found for managerId');
+        }
       }
-    }
-    final pesapalCreds = managerCredentials?['pesapal'] ?? {};
-    final notificationId = pesapalCreds['notification_id'] ?? '';
-    // Fetch tenant billing address
-    final billingDoc = await FirebaseFirestore.instance
-        .collection('billing')
-        .doc(userId)
-        .get();
-    final billingData = billingDoc.data() ?? {};
-    // Months list
-    final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    List<String> selectedMonths = [];
-    String currency = 'UGX';
-    double rentAmount = (facility['rent'] is num)
-        ? facility['rent'].toDouble()
-        : double.tryParse(facility['rent']?.toString() ?? '0') ?? 0;
-    double totalAmount = 0;
-    String description = '';
-    String branch = '$propertyName-$facilityNumber';
-    String callbackUrl =
-        'https://www.grealm.org/success'; // Replace with your app's success page
-    String redirectMode = '';
-    String transactionId = _generateTransactionId();
+      final pesapalCreds = managerCredentials?['pesapal'] ?? {};
+      print('[LOG] pesapalCreds: ' + pesapalCreds.toString());
+      debugPrint('[DEBUG] pesapalCreds: ' + pesapalCreds.toString());
+      final notificationId = pesapalCreds['notification_id'] ?? '';
+      print('[LOG] notification_id: ' + notificationId.toString());
+      debugPrint('[DEBUG] notification_id: ' + notificationId.toString());
+      // Fetch tenant billing address
+      final billingDoc = await FirebaseFirestore.instance
+          .collection('billing')
+          .doc(userId)
+          .get();
+      final billingData = billingDoc.data() ?? {};
+      print('[LOG] billingData: ' + billingData.toString());
+      debugPrint('[DEBUG] billingData: ' + billingData.toString());
+      // Months list
+      final months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ];
+      List<String> selectedMonths = [];
+      String currency = 'UGX';
+      double rentAmount = (facility['rent'] is num)
+          ? facility['rent'].toDouble()
+          : double.tryParse(facility['rent']?.toString() ?? '0') ?? 0;
+      double totalAmount = 0;
+      String description = '';
+      String branch = '$propertyName-$facilityNumber';
+      String callbackUrl =
+          'https://www.grealm.org/success'; // Replace with your app's success page
+      String redirectMode = '';
+      String transactionId = _generateTransactionId();
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            totalAmount = rentAmount * selectedMonths.length;
-            description = selectedMonths.isEmpty
-                ? ''
-                : 'Rent for ' + selectedMonths.join(', ');
-            return Padding(
-              padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                  left: 16,
-                  right: 16,
-                  top: 24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Pay Rent',
-                        style: TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Text('Currency:'),
-                        SizedBox(width: 16),
-                        DropdownButton<String>(
-                          value: currency,
-                          items: [
-                            DropdownMenuItem(value: 'UGX', child: Text('UGX')),
-                            DropdownMenuItem(value: 'USD', child: Text('USD')),
-                          ],
-                          onChanged: (val) {
-                            setState(() => currency = val ?? 'UGX');
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    Text('Select Months to Pay For:'),
-                    Wrap(
-                      spacing: 8,
-                      children: months.map((month) {
-                        final selected = selectedMonths.contains(month);
-                        return FilterChip(
-                          label: Text(month),
-                          selected: selected,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                selectedMonths.add(month);
-                              } else {
-                                selectedMonths.remove(month);
-                              }
-                            });
-                          },
-                          shape: StadiumBorder(
-                            side: BorderSide(
-                              color: Colors.blue, // Blue border
-                              width: 2,
-                            ),
-                          ),
-                          selectedColor: Colors.blue, // Solid blue background
-                          checkmarkColor: Colors.white,
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 12),
-                    Text('Amount:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(
-                      '$currency ${NumberFormat('#,##0').format(totalAmount)}',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 119, 29, 29), // Maroon color
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text('Description:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(description),
-                    SizedBox(height: 12),
-                    Text('Branch:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(branch),
-                    SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: Icon(Icons.edit, color: Colors.white),
-                          label: Text('Edit Billing Address'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color.fromARGB(255, 71, 71, 71),
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Future.delayed(Duration(milliseconds: 300), () {
-                              _showEditBillingAddressDialog(context);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(255, 147, 32, 32),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Proceed to Pay'),
-                      onPressed: selectedMonths.isEmpty
-                          ? null
-                          : () {
-                              final payRentData = {
-                                'id': transactionId,
-                                'currency': currency,
-                                'amount': totalAmount,
-                                'description': description,
-                                'callback_url': callbackUrl,
-                                'redirect_mode': redirectMode,
-                                'notification_id': notificationId,
-                                'branch': branch,
-                                'billing_address': billingData,
-                              };
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PayRentDetailsPage(
-                                    payRentData: payRentData,
-                                    onBack: () {
-                                      Navigator.pop(context);
-                                    },
-                                    onBackToFacilities: () {
-                                      Navigator.pop(context);
-                                      setState(() {
-                                        selectedFacilityId = null;
-                                        selectedFacility = null;
-                                        selectedProperty = null;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              );
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              totalAmount = rentAmount * selectedMonths.length;
+              description = selectedMonths.isEmpty
+                  ? ''
+                  : 'Rent for ' + selectedMonths.join(', ');
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                    left: 16,
+                    right: 16,
+                    top: 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pay Rent',
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Text('Currency:'),
+                          SizedBox(width: 16),
+                          DropdownButton<String>(
+                            value: currency,
+                            items: [
+                              DropdownMenuItem(
+                                  value: 'UGX', child: Text('UGX')),
+                              DropdownMenuItem(
+                                  value: 'USD', child: Text('USD')),
+                            ],
+                            onChanged: (val) {
+                              setState(() => currency = val ?? 'UGX');
                             },
-                    ),
-                    SizedBox(height: 24),
-                    Row(
-                      children: [
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.green, width: 2),
-                            foregroundColor:
-                                const Color.fromARGB(255, 41, 121, 43),
                           ),
-                          child: Text('Back to Facilities',
-                              style: TextStyle(color: Colors.green)),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            setState(() {
-                              selectedFacilityId = null;
-                              selectedFacility = null;
-                              selectedProperty = null;
-                            });
-                          },
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Text('Select Months to Pay For:'),
+                      Wrap(
+                        spacing: 8,
+                        children: months.map((month) {
+                          final selected = selectedMonths.contains(month);
+                          return FilterChip(
+                            label: Text(month),
+                            selected: selected,
+                            onSelected: (val) {
+                              setState(() {
+                                if (val) {
+                                  selectedMonths.add(month);
+                                } else {
+                                  selectedMonths.remove(month);
+                                }
+                              });
+                            },
+                            shape: StadiumBorder(
+                              side: BorderSide(
+                                color: Colors.blue, // Blue border
+                                width: 2,
+                              ),
+                            ),
+                            selectedColor: Colors.blue, // Solid blue background
+                            checkmarkColor: Colors.white,
+                          );
+                        }).toList(),
+                      ),
+                      SizedBox(height: 12),
+                      Text('Amount:',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '$currency ${NumberFormat('#,##0').format(totalAmount)}',
+                        style: TextStyle(
+                          color:
+                              Color.fromARGB(255, 119, 29, 29), // Maroon color
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-                  ],
+                      ),
+                      SizedBox(height: 12),
+                      Text('Description:',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(description),
+                      SizedBox(height: 12),
+                      Text('Branch:',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(branch),
+                      SizedBox(height: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color.fromARGB(255, 147, 32, 32),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Proceed to Pay'),
+                        onPressed: selectedMonths.isEmpty
+                            ? null
+                            : () {
+                                final payRentData = {
+                                  'id': transactionId,
+                                  'currency': currency,
+                                  'amount': totalAmount,
+                                  'description': description,
+                                  'callback_url': callbackUrl,
+                                  'redirect_mode': redirectMode,
+                                  'notification_id': notificationId,
+                                  'branch': branch,
+                                  'billing_address': billingData,
+                                };
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PayRentDetailsPage(
+                                      payRentData: payRentData,
+                                      onBack: () {
+                                        Navigator.pop(context);
+                                      },
+                                      onBackToFacilities: () {
+                                        Navigator.pop(context);
+                                        setState(() {
+                                          selectedFacilityId = null;
+                                          selectedFacility = null;
+                                          selectedProperty = null;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: Icon(Icons.edit, color: Colors.white),
+                            label: Text('Edit Billing Address'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color.fromARGB(255, 71, 71, 71),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Future.delayed(Duration(milliseconds: 300), () {
+                                _showEditBillingAddressDialog(context);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 24),
+                      Row(
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.green, width: 2),
+                              foregroundColor:
+                                  const Color.fromARGB(255, 41, 121, 43),
+                            ),
+                            child: Text('Back to Facilities',
+                                style: TextStyle(color: Colors.green)),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              setState(() {
+                                selectedFacilityId = null;
+                                selectedFacility = null;
+                                selectedProperty = null;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
+              );
+            },
+          );
+        },
+      );
+    } catch (e, stack) {
+      print('[ERROR] Exception in _showPayRentScreen: ' + e.toString());
+      print(stack.toString());
+      debugPrint('[ERROR] Exception in _showPayRentScreen: ' + e.toString());
+      debugPrint(stack.toString());
+    }
   }
 
   String _generateTransactionId() {
