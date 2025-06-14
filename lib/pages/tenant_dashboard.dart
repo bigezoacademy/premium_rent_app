@@ -6,6 +6,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import '../auth_service.dart';
 import '../main.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class TenantDashboard extends StatefulWidget {
   final VoidCallback? onLogout;
@@ -936,6 +938,8 @@ class _TenantDashboardState extends State<TenantDashboard> {
                                   'notification_id': notificationId,
                                   'branch': branch,
                                   'billing_address': billingData,
+                                  'managerEmail':
+                                      managerEmail, // Ensure managerEmail is included
                                 };
                                 Navigator.push(
                                   context,
@@ -1141,11 +1145,36 @@ class PayRentDetailsPage extends StatelessWidget {
     required this.onBackToFacilities,
   }) : super(key: key);
 
+  Future<String?> submitPesapalPayment(
+      String managerEmail, Map<String, dynamic> paymentData) async {
+    final url = Uri.parse('http://localhost:3000/pesapal/pay');
+    final response = await http.post(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'managerEmail': managerEmail,
+        'paymentData': paymentData,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['redirect_url'];
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final description = payRentData['description'] ?? '';
     final currency = payRentData['currency'] ?? '';
     final amount = payRentData['amount'] ?? '';
+    final managerEmail = payRentData['managerEmail'] ?? '';
+    // Remove managerEmail from paymentData before sending
+    final paymentData = Map<String, dynamic>.from(payRentData);
+    paymentData.remove('managerEmail');
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue[900],
@@ -1205,20 +1234,46 @@ class PayRentDetailsPage extends StatelessWidget {
                   textStyle:
                       TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text('Payment Data'),
-                      content: SingleChildScrollView(
-                        child: Text(payRentData.toString()),
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text('Close'),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
+                onPressed: () async {
+                  // Build paymentData with only the required fields
+                  final billing = payRentData['billing_address'] ?? {};
+                  final paymentData = {
+                    'id': payRentData['id'],
+                    'currency': payRentData['currency'],
+                    'amount': payRentData['amount'],
+                    'description': payRentData['description'],
+                    'callback_url': payRentData['callback_url'],
+                    'redirect_mode': payRentData['redirect_mode'],
+                    'notification_id': payRentData['notification_id'],
+                    'branch': payRentData['branch'],
+                    'billing_address': {
+                      'email_address': billing['email_address'],
+                      'phone_number': billing['phone_number'],
+                      'country_code': billing['country_code'],
+                      'first_name': billing['first_name'],
+                      'last_name': billing['last_name'],
+                    },
+                  };
+                  final managerEmail = payRentData['managerEmail'] ?? '';
+                  print('[DEBUG] Sending to backend:');
+                  print(jsonEncode({
+                    'managerEmail': managerEmail,
+                    'paymentData': paymentData,
+                  }));
+                  final redirectUrl =
+                      await submitPesapalPayment(managerEmail, paymentData);
+                  if (redirectUrl == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to initiate payment.')),
+                    );
+                    return;
+                  }
+                  // Open payment URL in a new screen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          PesapalWebViewPage(redirectUrl: redirectUrl),
                     ),
                   );
                 },
@@ -1233,6 +1288,37 @@ class PayRentDetailsPage extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class PesapalWebViewPage extends StatelessWidget {
+  final String redirectUrl;
+  const PesapalWebViewPage({Key? key, required this.redirectUrl})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Complete Payment'),
+        backgroundColor: Colors.red[900],
+      ),
+      body: Center(
+        child: ElevatedButton(
+          child: Text('Open Payment Page'),
+          onPressed: () async {
+            if (await canLaunchUrl(Uri.parse(redirectUrl))) {
+              await launchUrl(Uri.parse(redirectUrl),
+                  mode: LaunchMode.externalApplication);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not open payment page.')),
+              );
+            }
+          },
         ),
       ),
     );
