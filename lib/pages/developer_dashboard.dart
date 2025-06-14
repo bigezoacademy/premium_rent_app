@@ -105,13 +105,35 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
     }
     try {
       // Create manager in Firestore (let them sign in with Google)
-      await FirebaseFirestore.instance.collection('users').add({
+      final userRef = await FirebaseFirestore.instance.collection('users').add({
         'name': nameController.text.trim(),
         'email': emailController.text.trim(),
         'phone': phoneController.text.trim(),
         'role': 'Property Manager',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      // Auto-create credentials for the new property manager
+      await FirebaseFirestore.instance
+          .collection('credentials')
+          .doc(userRef.id)
+          .set({
+        'userUid': userRef.id,
+        'userEmail': emailController.text.trim(),
+        'role': 'Property Manager',
+        'createdAt': FieldValue.serverTimestamp(),
+        'pesapal': {
+          'userId': userRef.id,
+          'email': emailController.text.trim(),
+          'notification_id': '',
+          'Consumer_key': '',
+          'Consumer_secret': '',
+        },
+        'egosms': {
+          'userId': userRef.id,
+          'username': emailController.text.trim(),
+          'password': '',
+        }
+      }, SetOptions(merge: true));
       nameController.clear();
       emailController.clear();
       phoneController.clear();
