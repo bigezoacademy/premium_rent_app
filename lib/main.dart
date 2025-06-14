@@ -92,39 +92,6 @@ Future<void> ensureCollectionsAndLinksForUser(
   }
 }
 
-Future<void> patchOldManagerCredentials() async {
-  final credentialsRef = FirebaseFirestore.instance.collection('credentials');
-  final snapshot = await credentialsRef.get();
-
-  for (final doc in snapshot.docs) {
-    final data = doc.data();
-    if (data['role'] == 'Property Manager') {
-      final userId = data['userUid'] ?? doc.id;
-      final email = data['userEmail'] ?? '';
-      final pesapal = data['pesapal'] ?? {};
-      final egosms = data['egosms'] ?? {};
-
-      await credentialsRef.doc(doc.id).set({
-        'userUid': userId,
-        'userEmail': email,
-        'role': 'Property Manager',
-        'pesapal': {
-          'userId': pesapal['userId'] ?? userId,
-          'email': pesapal['email'] ?? email,
-          'notification_id': pesapal['notification_id'] ?? '',
-          'Consumer_key': pesapal['Consumer_key'] ?? '',
-          'Consumer_secret': pesapal['Consumer_secret'] ?? '',
-        },
-        'egosms': {
-          'userId': egosms['userId'] ?? userId,
-          'username': egosms['username'] ?? email,
-          'password': egosms['password'] ?? '',
-        }
-      }, SetOptions(merge: true));
-    }
-  }
-}
-
 class MyApp extends StatefulWidget {
   @override
   State<MyApp> createState() => _MyAppState();

@@ -769,28 +769,14 @@ class _TenantDashboardState extends State<TenantDashboard> {
       // Fetch manager credentials
       Map<String, dynamic>? managerCredentials;
       String? managerEmail = property['managerEmail'] ?? property['ownerEmail'];
-      print('[LOG] managerEmail used for credentials: ' +
-          (managerEmail ?? 'NULL'));
-      debugPrint('[DEBUG] managerEmail used for credentials: ' +
-          (managerEmail ?? 'NULL'));
       if (managerEmail != null && managerEmail.isNotEmpty) {
         final credQuery = await FirebaseFirestore.instance
             .collection('credentials')
             .where('userEmail', isEqualTo: managerEmail)
             .limit(1)
             .get();
-        print('[LOG] credentials query docs: ' +
-            credQuery.docs.length.toString());
-        debugPrint('[DEBUG] credentials query docs: ' +
-            credQuery.docs.length.toString());
         if (credQuery.docs.isNotEmpty) {
           managerCredentials = credQuery.docs.first.data();
-          print('[LOG] managerCredentials: ' + managerCredentials.toString());
-          debugPrint(
-              '[DEBUG] managerCredentials: ' + managerCredentials.toString());
-        } else {
-          print('[LOG] No credentials found for managerEmail');
-          debugPrint('[DEBUG] No credentials found for managerEmail');
         }
       } else if (property['managerId'] != null) {
         final credDoc = await FirebaseFirestore.instance
@@ -799,29 +785,16 @@ class _TenantDashboardState extends State<TenantDashboard> {
             .get();
         if (credDoc.exists) {
           managerCredentials = credDoc.data();
-          print('[LOG] managerCredentials (by managerId): ' +
-              managerCredentials.toString());
-          debugPrint('[DEBUG] managerCredentials (by managerId): ' +
-              managerCredentials.toString());
-        } else {
-          print('[LOG] No credentials found for managerId');
-          debugPrint('[DEBUG] No credentials found for managerId');
         }
       }
       final pesapalCreds = managerCredentials?['pesapal'] ?? {};
-      print('[LOG] pesapalCreds: ' + pesapalCreds.toString());
-      debugPrint('[DEBUG] pesapalCreds: ' + pesapalCreds.toString());
       final notificationId = pesapalCreds['notification_id'] ?? '';
-      print('[LOG] notification_id: ' + notificationId.toString());
-      debugPrint('[DEBUG] notification_id: ' + notificationId.toString());
       // Fetch tenant billing address
       final billingDoc = await FirebaseFirestore.instance
           .collection('billing')
           .doc(userId)
           .get();
       final billingData = billingDoc.data() ?? {};
-      print('[LOG] billingData: ' + billingData.toString());
-      debugPrint('[DEBUG] billingData: ' + billingData.toString());
       // Months list
       final months = [
         'January',
@@ -845,8 +818,9 @@ class _TenantDashboardState extends State<TenantDashboard> {
       double totalAmount = 0;
       String description = '';
       String branch = '$propertyName-$facilityNumber';
+      // Use callback_url from pesapalCreds if available, else fallback
       String callbackUrl =
-          'https://www.grealm.org/success'; // Replace with your app's success page
+          pesapalCreds['callback_url'] ?? 'https://www.grealm.org/success';
       String redirectMode = '';
       String transactionId = _generateTransactionId();
 

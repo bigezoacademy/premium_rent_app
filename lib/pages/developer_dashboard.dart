@@ -127,6 +127,7 @@ class _DeveloperDashboardState extends State<DeveloperDashboard> {
           'notification_id': '',
           'Consumer_key': '',
           'Consumer_secret': '',
+          'callback_url': 'https://www.grealm.org/success',
         },
         'egosms': {
           'userId': userRef.id,
