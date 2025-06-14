@@ -869,8 +869,8 @@ class _TenantDashboardState extends State<TenantDashboard> {
                               width: 2,
                             ),
                           ),
-                          selectedColor: Colors.blue.withOpacity(0.2),
-                          checkmarkColor: Colors.blue,
+                          selectedColor: Colors.blue, // Solid blue background
+                          checkmarkColor: Colors.white,
                         );
                       }).toList(),
                     ),
@@ -923,11 +923,36 @@ class _TenantDashboardState extends State<TenantDashboard> {
                       onPressed: selectedMonths.isEmpty
                           ? null
                           : () {
-                              // Here you would proceed to payment logic
-                              // All required fields are ready:
-                              // currency, id (transactionId), amount (totalAmount),
-                              // description, callback_url, redirect_mode, notification_id, branch
-                              // and billing address from billingData
+                              final payRentData = {
+                                'id': transactionId,
+                                'currency': currency,
+                                'amount': totalAmount,
+                                'description': description,
+                                'callback_url': callbackUrl,
+                                'redirect_mode': redirectMode,
+                                'notification_id': notificationId,
+                                'branch': branch,
+                                'billing_address': billingData,
+                              };
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PayRentDetailsPage(
+                                    payRentData: payRentData,
+                                    onBack: () {
+                                      Navigator.pop(context);
+                                    },
+                                    onBackToFacilities: () {
+                                      Navigator.pop(context);
+                                      setState(() {
+                                        selectedFacilityId = null;
+                                        selectedFacility = null;
+                                        selectedProperty = null;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                     ),
                     SizedBox(height: 24),
@@ -1067,6 +1092,116 @@ class TenantPropertyDetailPage extends StatelessWidget {
                   },
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// New page for Pay Rent Details
+class PayRentDetailsPage extends StatelessWidget {
+  final Map<String, dynamic> payRentData;
+  final VoidCallback onBack;
+  final VoidCallback onBackToFacilities;
+  const PayRentDetailsPage({
+    Key? key,
+    required this.payRentData,
+    required this.onBack,
+    required this.onBackToFacilities,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final description = payRentData['description'] ?? '';
+    final currency = payRentData['currency'] ?? '';
+    final amount = payRentData['amount'] ?? '';
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue[900],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: onBack,
+        ),
+        title: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0),
+          child: Text(
+            'PAY RENT',
+            style: TextStyle(
+              fontSize: 30,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        toolbarHeight: 80,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 20),
+            Text(
+              description,
+              style: TextStyle(fontSize: 16, color: Colors.black),
+            ),
+            SizedBox(height: 20),
+            Row(
+              children: [
+                Text(
+                  '$currency',
+                  style: TextStyle(fontSize: 24, color: Colors.black),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  '${NumberFormat('#,##0').format(amount)}',
+                  style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            SizedBox(height: 40),
+            Center(
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.send, color: Colors.white),
+                label: Text('Pay'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[900],
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                  textStyle:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Payment Data'),
+                      content: SingleChildScrollView(
+                        child: Text(payRentData.toString()),
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Spacer(),
+            Center(
+              child: TextButton(
+                child: Text('Back to Facilities',
+                    style: TextStyle(color: Colors.green)),
+                onPressed: onBackToFacilities,
+              ),
             ),
           ],
         ),
