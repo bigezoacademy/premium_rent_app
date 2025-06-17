@@ -1225,57 +1225,95 @@ class PayRentDetailsPage extends StatelessWidget {
             ),
             SizedBox(height: 40),
             Center(
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.send, color: Colors.white),
-                label: Text('Pay'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[900],
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  textStyle:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () async {
-                  // Build paymentData with only the required fields
-                  final billing = payRentData['billing_address'] ?? {};
-                  final paymentData = {
-                    'id': payRentData['id'],
-                    'currency': payRentData['currency'],
-                    'amount': payRentData['amount'],
-                    'description': payRentData['description'],
-                    'callback_url': payRentData['callback_url'],
-                    'redirect_mode': payRentData['redirect_mode'],
-                    'notification_id': payRentData['notification_id'],
-                    'branch': payRentData['branch'],
-                    'billing_address': {
-                      'email_address': billing['email_address'],
-                      'phone_number': billing['phone_number'],
-                      'country_code': billing['country_code'],
-                      'first_name': billing['first_name'],
-                      'last_name': billing['last_name'],
-                    },
-                  };
-                  final managerEmail = payRentData['managerEmail'] ?? '';
-                  print('[DEBUG] Sending to backend:');
-                  print(jsonEncode({
-                    'managerEmail': managerEmail,
-                    'paymentData': paymentData,
-                  }));
-                  final redirectUrl =
-                      await submitPesapalPayment(managerEmail, paymentData);
-                  if (redirectUrl == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to initiate payment.')),
-                    );
-                    return;
-                  }
-                  // Open payment URL in a new screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          PesapalWebViewPage(redirectUrl: redirectUrl),
-                    ),
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.send, color: Colors.white),
+                        label: Text('Pay'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[900],
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 16),
+                          textStyle: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: () async {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            barrierColor: Colors.black.withOpacity(0.7),
+                            builder: (context) => Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Preparing to process...',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                          // Build paymentData with only the required fields
+                          final billing = payRentData['billing_address'] ?? {};
+                          final paymentData = {
+                            'id': payRentData['id'],
+                            'currency': payRentData['currency'],
+                            'amount': payRentData['amount'],
+                            'description': payRentData['description'],
+                            'callback_url': payRentData['callback_url'],
+                            'redirect_mode': payRentData['redirect_mode'],
+                            'notification_id': payRentData['notification_id'],
+                            'branch': payRentData['branch'],
+                            'billing_address': {
+                              'email_address': billing['email_address'],
+                              'phone_number': billing['phone_number'],
+                              'country_code': billing['country_code'],
+                              'first_name': billing['first_name'],
+                              'last_name': billing['last_name'],
+                            },
+                          };
+                          final managerEmail =
+                              payRentData['managerEmail'] ?? '';
+                          print('[DEBUG] Sending to backend:');
+                          print(jsonEncode({
+                            'managerEmail': managerEmail,
+                            'paymentData': paymentData,
+                          }));
+                          final redirectUrl = await submitPesapalPayment(
+                              managerEmail, paymentData);
+                          Navigator.of(context, rootNavigator: true)
+                              .pop(); // Dismiss loading dialog
+                          if (redirectUrl == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text('Failed to initiate payment.')),
+                            );
+                            return;
+                          }
+                          // Open payment URL in a new screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PesapalWebViewPage(redirectUrl: redirectUrl),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   );
                 },
               ),

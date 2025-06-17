@@ -294,8 +294,8 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
               // App icon above Google button
               Image.asset(
                 'assets/bigezo.png',
-                width: 350, // Increased width
-                height: 350, // Increased height
+                width: 350,
+                height: 350,
                 fit: BoxFit.contain,
               ),
               SizedBox(height: 18),
@@ -457,6 +457,103 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                 ),
               ),
               SizedBox(height: 40),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[900],
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(180, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text('Features',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: Colors.white,
+                      title: Text('App Features',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Tenants',
+                                style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                            SizedBox(height: 4),
+                            ...[
+                              'Pay rent (Mobile Money, VISA)',
+                              'View payment history',
+                              'Edit billing address',
+                              'Contact property manager/owner',
+                              'View amenities and property info',
+                              'Browse available properties',
+                            ].map((f) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 12, bottom: 2),
+                                  child: Text('• $f',
+                                      style: TextStyle(color: Colors.black)),
+                                )),
+                            SizedBox(height: 16),
+                            Text('Property Manager',
+                                style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                            SizedBox(height: 4),
+                            ...[
+                              'Add/Edit/Delete properties',
+                              'Add/Edit/Delete facilities/rooms',
+                              'View and manage tenants',
+                              'Assign tenants to facilities',
+                              'View payments & receipts',
+                              'View financial analytics',
+                              'Set and update rent details',
+                              'Mark facilities as occupied/vacant',
+                              'View property details and owner info',
+                            ].map((f) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 12, bottom: 2),
+                                  child: Text('• $f',
+                                      style: TextStyle(color: Colors.black)),
+                                )),
+                            SizedBox(height: 16),
+                            Text('Property Owner',
+                                style: TextStyle(
+                                    color: Colors.deepPurple,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                            SizedBox(height: 4),
+                            ...[
+                              'View properties they own',
+                              'View property details',
+                              'View analytics and billing',
+                              'Manager-level actions if also a manager',
+                            ].map((f) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 12, bottom: 2),
+                                  child: Text('• $f',
+                                      style: TextStyle(color: Colors.black)),
+                                )),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          child: Text('Close',
+                              style: TextStyle(color: Colors.grey[800])),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              SizedBox(height: 24),
             ],
           ),
         ),
