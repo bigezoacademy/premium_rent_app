@@ -153,7 +153,7 @@ class SplashScreen extends StatelessWidget {
       body: Center(
         child: Image.asset(
           'assets/logo.png', // Change to your preferred asset
-          width: 180,
+          width: 250,
           fit: BoxFit.contain,
         ),
       ),
@@ -273,12 +273,14 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black, // Set homepage background to black
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.black, // AppBar dark to match background
         elevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.black),
+                icon: Icon(Icons.arrow_back,
+                    color: Colors.white), // White icon for contrast
                 onPressed: () => Navigator.maybePop(context),
               )
             : null,
@@ -292,8 +294,8 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
               // App icon above Google button
               Image.asset(
                 'assets/bigezo.png',
-                width: 220, // Increased width
-                height: 220, // Increased height
+                width: 350, // Increased width
+                height: 350, // Increased height
                 fit: BoxFit.contain,
               ),
               SizedBox(height: 18),
@@ -322,33 +324,42 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                   ),
                 ),
               ],
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
+              SizedBox(
+                width: 250, // Match the image width exactly
+                height: 100, // Match the image height exactly
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.transparent, // Transparent background
+                    foregroundColor: Colors.black,
+                    shadowColor: Colors.transparent, // Remove shadow
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    elevation: 0,
+                    padding: EdgeInsets.zero, // Remove all padding
                   ),
-                  elevation: 0,
+                  onPressed: isLoading ? null : _handleGoogleAuth,
+                  child: isLoading
+                      ? SizedBox(
+                          height: 28,
+                          width: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Image.asset(
+                          'assets/googlein.png',
+                          height: 100,
+                          width: 250,
+                          fit: BoxFit.contain,
+                        ),
                 ),
-                onPressed: isLoading ? null : _handleGoogleAuth,
-                child: isLoading
-                    ? SizedBox(
-                        height: 28,
-                        width: 28,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Image.asset(
-                        'assets/googlein.png',
-                        height: 100,
-                        width: 250,
-                        fit: BoxFit.contain,
-                      ),
               ),
               SizedBox(height: 24),
               // Add the public welcome card below the sign-in button
               Card(
-                elevation: 4,
+                color: Colors.white
+                    .withOpacity(0.1), // Transparent white background
+                elevation: 0, // Removed shadow
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 child: Padding(
@@ -359,7 +370,9 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                       // Property Manager info above the contact button
                       Text(
                         'Want to become a property manager?',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: const Color.fromARGB(221, 255, 255, 255)),
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 8),
@@ -414,7 +427,9 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                       // Tenant info above the property listing button
                       Text(
                         'Looking to rent? Browse our available properties!',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: const Color.fromARGB(221, 255, 255, 255)),
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 8),
@@ -422,7 +437,8 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
                         icon: Icon(Icons.home, color: Colors.white),
                         label: Text('View Property Listings'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF002366), // Dark grey
+                          backgroundColor:
+                              Color.fromARGB(255, 22, 72, 154), // Dark grey
                           foregroundColor: Colors.white,
                           minimumSize: Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
