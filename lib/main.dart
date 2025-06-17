@@ -358,7 +358,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen> {
               // Add the public welcome card below the sign-in button
               Card(
                 color: Colors.white
-                    .withOpacity(0.1), // Transparent white background
+                    .withOpacity(0.0), // Transparent white background
                 elevation: 0, // Removed shadow
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
