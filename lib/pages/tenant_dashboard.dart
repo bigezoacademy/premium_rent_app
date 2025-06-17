@@ -1147,7 +1147,8 @@ class PayRentDetailsPage extends StatelessWidget {
 
   Future<String?> submitPesapalPayment(
       String managerEmail, Map<String, dynamic> paymentData) async {
-    final url = Uri.parse('http://localhost:3000/pesapal/pay');
+    final url = Uri.parse(
+        'https://us-central1-premium-rent-app.cloudfunctions.net/api/pesapal/pay');
     final response = await http.post(
       url,
       headers: {
